@@ -1,4 +1,3 @@
-
 import streamlit as st
 import numpy as np
 import random
@@ -342,6 +341,76 @@ if st.session_state.bj_saldo > 0:
             st.sidebar.error(f"💨 ¡Errado! El blanco apareció en la posición {blanco_real}. Perdiste ${st.session_state.tb_apuesta}.")
 
 
+# --- 🥤 JUEGO 5: TRES VASOS Y UNA BOLITA (TRILEROS) ---
+st.sidebar.markdown("---")
+st.sidebar.header("🥤 ¿Dónde está la bolita?")
+
+if "tl_apuesta" not in st.session_state:
+    st.session_state.tl_apuesta = 50
+
+if "tl_estado" not in st.session_state:
+    st.session_state.tl_estado = "inicio"  # inicio, mezclando, adivinar, resultado
+if "tl_bolita" not in st.session_state:
+    st.session_state.tl_bolita = 1
+if "tl_msg" not in st.session_state:
+    st.session_state.tl_msg = ""
+
+if st.session_state.bj_saldo > 0 or st.session_state.tl_estado != "inicio":
+    if st.session_state.tl_estado == "inicio":
+        st.session_state.tl_apuesta = st.sidebar.number_input(
+            "Monto a apostar (Vasos):", min_value=10, max_value=st.session_state.bj_saldo, value=min(50, st.session_state.bj_saldo), step=10, key="apuesta_tl_val"
+        )
+        if st.sidebar.button("🃏 Mostrar Bolita y Mezclar", use_container_width=True):
+            st.session_state.bj_saldo -= st.session_state.tl_apuesta
+            st.session_state.tl_estado = "mezclando"
+            st.rerun()
+
+    if st.session_state.tl_estado == "mezclando":
+        # Simulación visual del truco de manos
+        anim_vasos = st.sidebar.empty()
+        anim_vasos.markdown("### 🥤&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🥤&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🥤\n#### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🔴 (Acá está...)")
+        time.sleep(0.6)
+        for _ in range(3):
+            anim_vasos.markdown("### 🔄 ¡Mezclando vasos rápidamente! 🔄")
+            time.sleep(0.3)
+        anim_vasos.empty()
+        
+        # Asignar posición final secreta (0, 1 o 2)
+        st.session_state.tl_bolita = random.randint(0, 2)
+        st.session_state.tl_estado = "adivinar"
+        st.rerun()
+
+    if st.session_state.tl_estado == "adivinar":
+        st.sidebar.write("🔒 *La bolita ya está oculta. Elegí un vaso:*")
+        cols_vasos = st.sidebar.columns(3)
+        for idx in range(3):
+            with cols_vasos[idx]:
+                if st.button(f"🥤 Vaso {idx+1}", key=f"btn_vaso_{idx}", use_container_width=True):
+                    if idx == st.session_state.tl_bolita:
+                        premio = st.session_state.tl_apuesta * 3
+                        st.session_state.bj_saldo += premio
+                        st.session_state.tl_msg = f"🎉 ¡EXCELENTE VISTA! La bolita estaba en el Vaso {idx+1}. Ganaste ${premio}."
+                    else:
+                        st.session_state.tl_msg = f"❌ ¡Le erraste! Estaba en el Vaso {st.session_state.tl_bolita+1}. Perdiste ${st.session_state.tl_apuesta}."
+                    st.session_state.tl_estado = "resultado"
+                    st.rerun()
+
+    if st.session_state.tl_estado == "resultado":
+        # Dibujar gráficamente dónde estaba
+        vasos_dibujo = ["🥤", "🥤", "🥤"]
+        vasos_dibujo[st.session_state.tl_bolita] = "🥤🔴"
+        st.sidebar.markdown(f"### {vasos_dibujo[0]} &nbsp;&nbsp;&nbsp;&nbsp; {vasos_dibujo[1]} &nbsp;&nbsp;&nbsp;&nbsp; {vasos_dibujo[2]}")
+        
+        if "🎉" in st.session_state.tl_msg:
+            st.sidebar.success(st.session_state.tl_msg)
+        else:
+            st.sidebar.error(st.session_state.tl_msg)
+            
+        if st.sidebar.button("🔄 Jugar otra vez", use_container_width=True):
+            st.session_state.tl_estado = "inicio"
+            st.rerun()
+
+
 # --- PROCESAMIENTO DE LOS DATOS DE OPTIMIZACIÓN ---
 c = [-datos_usuario[ap]["prio"] for ap in aparatos]
 conteo_coefs = [1.0, 1.0, 1.5, 1.2, 1.3, 1.0, 1.1]
@@ -394,6 +463,7 @@ with col2:
         st.metric(label="Total Aparatos Conectados (Mínimo: " + str(min_aparatos) + ")", value=f"{tot_aparatos:.2f}")
         st.metric(label="Gasto Mensual Total (Máximo: $" + str(limite_presupuesto) + ")", value=f"${tot_dinero:.2f}")
         st.metric(label="Consumo de Potencia Total (Máximo: " + str(limite_watts) + " W)", value=f"{tot_watts:.2f} W")
+
 
 
 
