@@ -8,21 +8,35 @@ st.set_page_config(page_title="Optimización del Hogar", layout="wide")
 # --- CONTEXTO DEL PROBLEMA EN LA PARTE SUPERIOR ---
 st.title("⚡ Optimización Eléctrica y de Calidad de Vida")
 
-with st.expander("📖 Ver descripción del problema a resolver", expanded=True):
+# Escenario 1: El problema base
+with st.expander("📖 Caso 1: El Desafío Base (Maximizar el Bienestar)", expanded=False):
     st.info(
-        "### 🎯 El Desafío: Maximizar el Bienestar en el Hogar\n"
+        "### 🎯 Balance General del Hogar\n"
         "Este sistema resuelve un problema de **Programación Lineal** para balancear el confort diario "
         "y el uso de electrodomésticos bajo restricciones económicas y energéticas estrictas.\n\n"
         "**¿Qué intenta resolver la aplicación?**\n"
         "1. **Objetivo Principal:** Encontrar cuántas horas al mes usar cada aparato para obtener la **máxima calidad de vida** "
-        "posible (basada en la importancia/prioridad asignada a cada uno).\n"
-        "2. **Restricción de Presupuesto:** El costo total acumulado por el uso por hora de los aparatos no debe superar el dinero mensual disponible.\n"
-        "3. **Restricción Energética:** El consumo eléctrico total no puede exceder el límite de Watts contratados o asignados para evitar sobrecargas.\n"
-        "4. **Restricción de Confort:** Asegurar que cada aparato se use al menos un tiempo mínimo mensual preestablecido, garantizando un piso de comodidad."
+        "posible (basada en la importancia asignada a cada uno).\n"
+        "2. **Restricción de Presupuesto:** El costo total acumulado por el uso no debe superar el dinero mensual disponible.\n"
+        "3. **Restricción Energética:** El consumo eléctrico total no puede exceder el límite de Watts para evitar sobrecargas."
+    )
+
+# Escenario 2: La crisis familiar (Tu nuevo caso)
+with st.expander("🚨 Caso 2: ¡Se mudó la suegra con la familia extendida!", expanded=True):
+    st.warning(
+        "### 📈 Crisis de Demanda Eléctrica y Financiera\n"
+        "**El nuevo escenario:** La suegra, sus dos hijas y los hijos de sus hijas se han mudado a la casa de forma permanente. "
+        "Al multiplicarse los habitantes (¡y debido a que no tienen cultura de ahorro!), el uso real "
+        "de los electrodomésticos se ha disparado por completo.\n\n"
+        "**Consecuencias en el sistema:**\n"
+        "* **El problema:** Los mínimos de horas de uso que venías manejando quedaron obsoletos. Si mantienes el presupuesto de $15,000 "
+        "y los 50,000 Watts, el algoritmo **fallará** porque el consumo vital de tanta gente supera los límites históricos.\n"
+        "* **La solución interactiva:** Para resolver esta crisis familiar, debes usar la **barra lateral** para estirar el "
+        "Presupuesto Máximo, ampliar los Watts permitidos y ajustar el piso mínimo de horas de aparatos críticos (como el lavarropas o la pava)."
     )
 
 st.write("---")
-st.write("💡 *Modifica los parámetros en la barra lateral para recalcular las horas óptimas de uso al mes automáticamente.*")
+st.write("💡 *Modifica los parámetros en la barra lateral para ajustar el sistema al nuevo escenario familiar.*")
 
 # --- BARRA LATERAL: ENTRADA DE DATOS ---
 st.sidebar.header("📊 Restricciones Globales")
@@ -100,7 +114,7 @@ with col1:
         }
         st.table(resultados_tabla)
     else:
-        st.error("❌ No se encontró solución. Los mínimos configurados superan el presupuesto o los Watts disponibles.")
+        st.error("❌ No se encontró solución. Con tanta gente en la casa, los mínimos configurados superan el presupuesto o los Watts disponibles. ¡Sube los límites en la barra lateral!")
 
 with col2:
     st.subheader("📊 Verificación de Restricciones")
@@ -112,3 +126,4 @@ with col2:
         st.metric(label="Total Aparatos Conectados (Mínimo: " + str(min_aparatos) + ")", value=f"{tot_aparatos:.2f}")
         st.metric(label="Gasto Mensual Total (Máximo: $" + str(limite_presupuesto) + ")", value=f"${tot_dinero:.2f}")
         st.metric(label="Consumo de Potencia Total (Máximo: " + str(limite_watts) + " W)", value=f"{tot_watts:.2f} Watts")
+       
