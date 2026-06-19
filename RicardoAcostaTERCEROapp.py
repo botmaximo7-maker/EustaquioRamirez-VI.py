@@ -260,10 +260,10 @@ st.sidebar.markdown("---")
 st.sidebar.header("🏇 Hípódromo Virtual")
 
 caballos = {
-    "Rayo Eléctrico (x2.0)": 2.0,
-    "Cortocircuito (x3.5)": 3.5,
-    "La Suega Veloz (x5.0)": 5.0,
-    "Lavarropas Turbo (x8.0)": 8.0
+    "Rayo McQueen (x2.0)": 2.0,
+    "Usain Bolt (x3.5)": 3.5,
+    "Galopante (x5.0)": 5.0,
+    "Juan (x8.0)": 8.0
 }
 
 if "ch_apuesta" not in st.session_state:
