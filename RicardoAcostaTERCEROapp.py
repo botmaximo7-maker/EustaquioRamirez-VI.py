@@ -1,3 +1,10 @@
+¡Totalmente! Vamos a darle un toque de casino real agregando un monedero con "fichas de la casa" falsas.
+
+Para lograrlo de forma correcta, inicializaremos un saldo de **$1,000** en el `st.session_state` si el usuario no ha jugado antes. El juego cobrará una apuesta fija (o puedes dejar que se configure automáticamente) y sumará o restará fondos según ganes, pierdas o empates (¡e incluso si sacas un Blackjack natural, paga 3 a 2!).
+
+Aquí tienes el código completo con el sistema de apuestas integrado:
+
+```python
 import streamlit as st
 import numpy as np
 import random
@@ -128,7 +135,7 @@ if st.sidebar.button("🔄 Reiniciar Ta-Te-Ti", use_container_width=True):
     st.rerun()
 
 
-# --- 🃏 JUEGO 2: BLACKJACK (AL FINAL DE LA BARRA LATERAL) ---
+# --- 🃏 JUEGO 2: BLACKJACK CON SALDO FALSO ---
 st.sidebar.markdown("---")
 st.sidebar.header("🃏 Blackjack (21)")
 
@@ -153,7 +160,12 @@ def calcular_puntos(mano):
         ases -= 1
     return puntos
 
-# Inicializar estados de Blackjack
+# Inicializar estados de Blackjack y Saldo Falso
+if "bj_saldo" not in st.session_state:
+    st.session_state.bj_saldo = 1000
+if "bj_apuesta" not in st.session_state:
+    st.session_state.bj_apuesta = 100
+
 if "bj_baraja" not in st.session_state:
     st.session_state.bj_baraja = crear_baraja()
     st.session_state.bj_jugador = []
@@ -161,7 +173,13 @@ if "bj_baraja" not in st.session_state:
     st.session_state.bj_estado = "inicio"  # inicio, jugando, terminado
     st.session_state.bj_msg = ""
 
+# Mostrar el saldo actual destacado
+st.sidebar.metric(label="💰 Tu Saldo de Fichas", value=f"${st.session_state.bj_saldo}")
+
 def iniciar_blackjack():
+    # Descontar la apuesta al iniciar la mano
+    st.session_state.bj_saldo -= st.session_state.bj_apuesta
+    
     st.session_state.bj_baraja = crear_baraja()
     random.shuffle(st.session_state.bj_baraja)
     st.session_state.bj_jugador = [st.session_state.bj_baraja.pop(), st.session_state.bj_baraja.pop()]
@@ -172,13 +190,27 @@ def iniciar_blackjack():
     # Comprobar Blackjack natural inmediato
     if calcular_puntos(st.session_state.bj_jugador) == 21:
         st.session_state.bj_estado = "terminado"
-        st.session_state.bj_msg = "¡Blackjack Natural! ¡Ganaste! 🎉"
+        # Paga 3 a 2 por Blackjack Natural
+        ganancia = int(st.session_state.bj_apuesta * 2.5)
+        st.session_state.bj_saldo += ganancia
+        st.session_state.bj_msg = f"¡Blackjack Natural! Ganaste ${ganancia}! 🎉"
 
 # Interfaz de Blackjack
 if st.session_state.bj_estado == "inicio":
-    if st.sidebar.button("🃏 Repartir Cartas", use_container_width=True):
-        iniciar_blackjack()
-        st.rerun()
+    # Selección de apuesta si no se está jugando
+    st.session_state.bj_apuesta = st.sidebar.number_input(
+        "Monto a apostar:", min_value=10, max_value=st.session_state.bj_saldo, value=min(100, st.session_state.bj_saldo), step=10, key="apuesta_val"
+    )
+    
+    if st.session_state.bj_saldo <= 0:
+        st.sidebar.error("😢 ¡Te quedaste sin fichas!")
+        if st.sidebar.button("💸 Solicitar préstamo (+$500)", use_container_width=True):
+            st.session_state.bj_saldo = 500
+            st.rerun()
+    else:
+        if st.sidebar.button("🃏 Repartir Cartas", use_container_width=True):
+            iniciar_blackjack()
+            st.rerun()
 else:
     pts_jugador = calcular_puntos(st.session_state.bj_jugador)
     pts_casa = calcular_puntos(st.session_state.bj_casa)
@@ -191,7 +223,7 @@ else:
         st.sidebar.write(f"**Tu Mano:** {', '.join(st.session_state.bj_jugador)} (Pts: {pts_jugador})")
         st.sidebar.write(f"**Casa:** {', '.join(st.session_state.bj_casa)} (Pts: {pts_casa})")
 
-    # Botones de juego
+    # Botones de juego activo
     if st.session_state.bj_estado == "jugando":
         col_bj1, col_bj2 = st.sidebar.columns(2)
         with col_bj1:
@@ -199,12 +231,13 @@ else:
                 st.session_state.bj_jugador.append(st.session_state.bj_baraja.pop())
                 if calcular_puntos(st.session_state.bj_jugador) > 21:
                     st.session_state.bj_estado = "terminado"
-                    st.session_state.bj_msg = "❌ ¡Te pasaste de 21! Perdiste."
+                    st.session_state.bj_msg = "❌ ¡Te pasaste de 21! Perdiste tu apuesta."
                 st.rerun()
         with col_bj2:
             if st.button("🛑 Plantarse", use_container_width=True, key="bj_plantar"):
                 st.session_state.bj_estado = "terminado"
-                # Turno de la casa de forma automática
+                
+                # Turno automático del crupier
                 while calcular_puntos(st.session_state.bj_casa) < 17:
                     st.session_state.bj_casa.append(st.session_state.bj_baraja.pop())
                 
@@ -212,25 +245,28 @@ else:
                 final_casa = calcular_puntos(st.session_state.bj_casa)
                 
                 if final_casa > 21:
-                    st.session_state.bj_msg = "🎉 ¡La casa se pasó! ¡Ganaste!"
+                    st.session_state.bj_saldo += st.session_state.bj_apuesta * 2
+                    st.session_state.bj_msg = f"🎉 ¡La casa se pasó! Ganaste ${st.session_state.bj_apuesta}."
                 elif final_jugador > final_casa:
-                    st.session_state.bj_msg = "🎉 ¡Ganaste por puntos!"
+                    st.session_state.bj_saldo += st.session_state.bj_apuesta * 2
+                    st.session_state.bj_msg = f"🎉 ¡Ganaste por puntos! Recibes ${st.session_state.bj_apuesta}."
                 elif final_jugador < final_casa:
                     st.session_state.bj_msg = "❌ Perdiste contra la casa."
                 else:
-                    st.session_state.bj_msg = "🤝 Es un empate (Push)."
+                    st.session_state.bj_saldo += st.session_state.bj_apuesta
+                    st.session_state.bj_msg = "🤝 Es un empate (Push). Recuperas tu apuesta."
                 st.rerun()
                 
     if st.session_state.bj_estado == "terminado":
-        if "¡Ganaste!" in st.session_state.bj_msg or "Blackjack" in st.session_state.bj_msg:
+        if "🎉" in st.session_state.bj_msg or "Blackjack" in st.session_state.bj_msg:
             st.sidebar.success(st.session_state.bj_msg)
-        elif "empate" in st.session_state.bj_msg:
+        elif "🤝" in st.session_state.bj_msg:
             st.sidebar.warning(st.session_state.bj_msg)
         else:
             st.sidebar.error(st.session_state.bj_msg)
             
-        if st.sidebar.button("🔄 Jugar de Nuevo", use_container_width=True, key="bj_reiniciar"):
-            iniciar_blackjack()
+        if st.sidebar.button("🔄 Siguiente Mano", use_container_width=True, key="bj_reiniciar"):
+            st.session_state.bj_estado = "inicio"
             st.rerun()
 
 
@@ -286,3 +322,5 @@ with col2:
         st.metric(label="Total Aparatos Conectados (Mínimo: " + str(min_aparatos) + ")", value=f"{tot_aparatos:.2f}")
         st.metric(label="Gasto Mensual Total (Máximo: $" + str(limite_presupuesto) + ")", value=f"${tot_dinero:.2f}")
         st.metric(label="Consumo de Potencia Total (Máximo: " + str(limite_watts) + " W)", value=f"{tot_watts:.2f} Watts")
+
+```
