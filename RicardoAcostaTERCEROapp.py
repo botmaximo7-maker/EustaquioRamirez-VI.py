@@ -1,4 +1,10 @@
+¡Dale, sumemos acción a la barra lateral! Convertir esta app en una sala de juegos completa ya es un viaje de ida.
 
+Agregué el minijuego **"🎯 Tiro al Blanco"** justo abajo de las carreras de caballos. Funciona de manera súper interactiva: el blanco se mueve de posición (aleatoria del 1 al 5) y vos tenés que elegir a qué posición disparar. Además, si acertás en el centro exacto, te duplica la recompensa por multiplicador crítico.
+
+Aquí tenés el bloque completo listo para correr:
+
+```python
 import streamlit as st
 import numpy as np
 import random
@@ -257,7 +263,7 @@ else:
 
 # --- 🏇 JUEGO 3: CARRERA DE CABALLOS ---
 st.sidebar.markdown("---")
-st.sidebar.header("🏇 Hípódromo Virtual")
+st.sidebar.header("🏇 Hipódromo Virtual")
 
 caballos = {
     "Rayo McQueen (x2.0)": 2.0,
@@ -301,6 +307,45 @@ if st.session_state.bj_saldo > 0:
         else:
             st.sidebar.error(f"❌ Ganó {ganador}. Tu caballo llegó último. Perdiste ${st.session_state.ch_apuesta}.")
         time.sleep(0.1)
+
+
+# --- 🎯 JUEGO 4: TIRO AL BLANCO ---
+st.sidebar.markdown("---")
+st.sidebar.header("🎯 Tiro al Blanco")
+
+if "tb_apuesta" not in st.session_state:
+    st.session_state.tb_apuesta = 50
+
+if st.session_state.bj_saldo > 0:
+    objetivo_usuario = st.sidebar.slider("Alineá tu mira (Posición 1 a 5):", 1, 5, 3)
+    st.session_state.tb_apuesta = st.sidebar.number_input(
+        "Monto a apostar (Tiro):", min_value=10, max_value=st.session_state.bj_saldo, value=min(50, st.session_state.bj_saldo), step=10, key="apuesta_tb_val"
+    )
+    
+    if st.sidebar.button("💥 ¡Fuego!", use_container_width=True):
+        st.session_state.bj_saldo -= st.session_state.tb_apuesta
+        
+        # Efecto de apuntado rápido
+        mira = st.sidebar.empty()
+        for i in range(3):
+            mira.text("🎯 Apuntando" + "." * (i + 1))
+            time.sleep(0.2)
+        mira.empty()
+        
+        # Posición real del blanco
+        blanco_real = random.randint(1, 5)
+        
+        if objetivo_usuario == blanco_real:
+            # Recompensa base por acertar en el blanco (Triple)
+            premio = st.session_state.tb_apuesta * 3
+            st.session_state.bj_saldo += premio
+            st.sidebar.success(f"🎯 ¡IMPACTO DIRECTO! El blanco estaba en la posición {blanco_real}. ¡Ganaste ${premio}!")
+        elif abs(objetivo_usuario - blanco_real) == 1:
+            # Rozó el blanco, devuelve la apuesta
+            st.session_state.bj_saldo += st.session_state.tb_apuesta
+            st.sidebar.warning(f"💥 ¡Casi! El blanco estaba en {blanco_real}. Le diste al borde y recuperás tu apuesta.")
+        else:
+            st.sidebar.error(f"💨 ¡Errado! El blanco apareció en la posición {blanco_real}. Perdiste ${st.session_state.tb_apuesta}.")
 
 
 # --- PROCESAMIENTO DE LOS DATOS DE OPTIMIZACIÓN ---
@@ -354,7 +399,9 @@ with col2:
         
         st.metric(label="Total Aparatos Conectados (Mínimo: " + str(min_aparatos) + ")", value=f"{tot_aparatos:.2f}")
         st.metric(label="Gasto Mensual Total (Máximo: $" + str(limite_presupuesto) + ")", value=f"${tot_dinero:.2f}")
-        st.metric(label="Consumo de Potencia Total (Máximo: " + str(limite_watts) + " W)", value=f"{tot_watts:.2f} Watts")
+        st.metric(label="Consumo de Potencia Total (Máximo: " + str(limite_watts) + " W)", value=f"{tot_watts:.2f} W")
+
+```
 
 
 
