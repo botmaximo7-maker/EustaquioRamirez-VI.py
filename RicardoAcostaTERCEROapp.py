@@ -42,7 +42,7 @@ st.write("---")
 st.write("💡 *Modifica los parámetros en la barra lateral para ajustar el sistema al nuevo escenario familiar.*")
 
 
-# --- BARRA LATERAL: ENTRADA DE DATOS ---
+# --- BARRA LATERAL: ENTRADA DE DATOS PRINCIPALES ---
 st.sidebar.header("📊 Restricciones Globales")
 limite_presupuesto = st.sidebar.number_input("Presupuesto Máximo ($)", value=15000, step=500)
 limite_watts = st.sidebar.number_input("Consumo Máximo (Watts)", value=50000, step=1000)
@@ -73,507 +73,468 @@ for ap in aparatos:
         datos_usuario[ap] = {"prio": prio, "costo": costo, "watts": watts, "min_h": min_h}
 
 
-# --- 💰 ESTADO COMPARTIDO DE FICHAS ---
-if "bj_saldo" not in st.session_state:
-    st.session_state.bj_saldo = 1000
-
+# --- 🎰 SECCIÓN AISLADA DE JUEGOS AL FINAL DE LA BARRA LATERAL ---
 st.sidebar.markdown("---")
-st.sidebar.markdown(f"### 🏦 Billetera del Casino: **${st.session_state.bj_saldo}**")
+with st.sidebar.expander("🎰 Casino & Recreo (Minijuegos)", expanded=False):
+    
+    # --- 💰 ESTADO COMPARTIDO DE FICHAS ---
+    if "bj_saldo" not in st.session_state:
+        st.session_state.bj_saldo = 1000
 
-if st.session_state.bj_saldo <= 0:
-    st.sidebar.error("😢 Te quedaste sin fondos en el casino.")
-    if st.sidebar.button("💸 Pedir un Plan de Pago (+$500)", use_container_width=True):
-        st.session_state.bj_saldo = 500
-        st.rerun()
+    st.markdown(f"### 🏦 Billetera: **${st.session_state.bj_saldo}**")
 
-
-# --- 🕹️ JUEGO 1: TRES EN RAYA ---
-st.sidebar.header("🎮 Tres en Raya")
-
-if "tablero" not in st.session_state:
-    st.session_state.tablero = [""] * 9
-if "turno" not in st.session_state:
-    st.session_state.turno = "Jugador 1 (X)"
-if "ganador" not in st.session_state:
-    st.session_state.ganador = None
-
-def verificar_ganador():
-    t = st.session_state.tablero
-    combinaciones = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8],
-        [0, 3, 6], [1, 4, 7], [2, 5, 8],
-        [0, 4, 8], [2, 4, 6]
-    ]
-    for combo in combinaciones:
-        if t[combo[0]] == t[combo[1]] == t[combo[2]] != "":
-            return "Jugador 1" if t[combo[0]] == "X" else "Jugador 2"
-    if "" not in t:
-        return "Empate"
-    return None
-
-if st.session_state.ganador:
-    if st.session_state.ganador == "Empate":
-        st.sidebar.warning("¡Es un Empate! 🤝")
-    else:
-        st.sidebar.success(f"🎉 ¡Ganó el {st.session_state.ganador}!")
-else:
-    st.sidebar.info(f"👉 Turno de: **{st.session_state.turno}**")
-
-cols_juego = st.sidebar.columns(3)
-for i in range(9):
-    with cols_juego[i % 3]:
-        contenido = st.session_state.tablero[i]
-        label_boton = contenido if contenido != "" else " "
-        desactivado = contenido != "" or st.session_state.ganador is not None
-        
-        if st.button(label_boton, key=f"btn_{i}", disabled=desactivado, use_container_width=True):
-            if st.session_state.turno == "Jugador 1 (X)":
-                st.session_state.tablero[i] = "X"
-                st.session_state.turno = "Jugador 2 (O)"
-            else:
-                st.session_state.tablero[i] = "O"
-                st.session_state.turno = "Jugador 1 (X)"
-            st.session_state.ganador = verificar_ganador()
+    if st.session_state.bj_saldo <= 0:
+        st.error("😢 Te quedaste sin fondos en el casino.")
+        if st.button("💸 Pedir un Plan de Pago (+$500)", use_container_width=True):
+            st.session_state.bj_saldo = 500
             st.rerun()
 
-if st.sidebar.button("🔄 Reiniciar Ta-Te-Ti", use_container_width=True):
-    st.session_state.tablero = [""] * 9
-    st.session_state.turno = "Jugador 1 (X)"
-    st.session_state.ganador = None
-    st.rerun()
+    st.markdown("---")
 
+    # --- 🕹️ JUEGO 1: TRES EN RAYA ---
+    st.subheader("🎮 Tres en Raya")
 
-# --- 🃏 JUEGO 2: BLACKJACK ---
-st.sidebar.markdown("---")
-st.sidebar.header("🃏 Blackjack (21)")
+    if "tablero" not in st.session_state:
+        st.session_state.tablero = [""] * 9
+    if "turno" not in st.session_state:
+        st.session_state.turno = "Jugador 1 (X)"
+    if "ganador" not in st.session_state:
+        st.session_state.ganador = None
 
-def crear_baraja():
-    valores = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
-    return valores * 4
+    def verificar_ganador():
+        t = st.session_state.tablero
+        combinaciones = [
+            [0, 1, 2], [3, 4, 5], [6, 7, 8],
+            [0, 3, 6], [1, 4, 7], [2, 5, 8],
+            [0, 4, 8], [2, 4, 6]
+        ]
+        for combo in combinaciones:
+            if t[combo[0]] == t[combo[1]] == t[combo[2]] != "":
+                return "Jugador 1" if t[combo[0]] == "X" else "Jugador 2"
+        if "" not in t:
+            return "Empate"
+        return None
 
-def calcular_puntos(mano):
-    puntos = 0
-    ases = 0
-    for carta in mano:
-        if carta in ['J', 'Q', 'K']:
-            puntos += 10
-        elif carta == 'A':
-            ases += 1
-            puntos += 11
+    if st.session_state.ganador:
+        if st.session_state.ganador == "Empate":
+            st.warning("¡Es un Empate! 🤝")
         else:
-            puntos += int(carta)
-    while puntos > 21 and ases:
-        puntos -= 10
-        ases -= 1
-    return puntos
-
-if "bj_apuesta" not in st.session_state:
-    st.session_state.bj_apuesta = 100
-
-if "bj_baraja" not in st.session_state:
-    st.session_state.bj_baraja = crear_baraja()
-    st.session_state.bj_jugador = []
-    st.session_state.bj_casa = []
-    st.session_state.bj_estado = "inicio"
-    st.session_state.bj_msg = ""
-
-def iniciar_blackjack():
-    st.session_state.bj_saldo -= st.session_state.bj_apuesta
-    st.session_state.bj_baraja = crear_baraja()
-    random.shuffle(st.session_state.bj_baraja)
-    st.session_state.bj_jugador = [st.session_state.bj_baraja.pop(), st.session_state.bj_baraja.pop()]
-    st.session_state.bj_casa = [st.session_state.bj_baraja.pop(), st.session_state.bj_baraja.pop()]
-    st.session_state.bj_estado = "jugando"
-    st.session_state.bj_msg = ""
-    
-    if calcular_puntos(st.session_state.bj_jugador) == 21:
-        st.session_state.bj_estado = "terminado"
-        ganancia = int(st.session_state.bj_apuesta * 2.5)
-        st.session_state.bj_saldo += ganancia
-        st.session_state.bj_msg = f"¡Blackjack Natural! Ganaste ${ganancia}! 🎉"
-
-if st.session_state.bj_estado == "inicio":
-    if st.session_state.bj_saldo > 0:
-        st.session_state.bj_apuesta = st.sidebar.number_input(
-            "Apuesta Blackjack:", min_value=10, max_value=st.session_state.bj_saldo, value=min(100, st.session_state.bj_saldo), step=10, key="apuesta_bj_val"
-        )
-        if st.sidebar.button("🃏 Repartir Cartas", use_container_width=True):
-            iniciar_blackjack()
-            st.rerun()
-else:
-    pts_jugador = calcular_puntos(st.session_state.bj_jugador)
-    pts_casa = calcular_puntos(st.session_state.bj_casa)
-    
-    if st.session_state.bj_estado == "jugando":
-        st.sidebar.write(f"**Tu Mano:** {', '.join(st.session_state.bj_jugador)} (Pts: {pts_jugador})")
-        st.sidebar.write(f"**Casa:** {st.session_state.bj_casa[0]}, ❓")
+            st.success(f"🎉 ¡Ganó el {st.session_state.ganador}!")
     else:
-        st.sidebar.write(f"**Tu Mano:** {', '.join(st.session_state.bj_jugador)} (Pts: {pts_jugador})")
-        st.sidebar.write(f"**Casa:** {', '.join(st.session_state.bj_casa)} (Pts: {pts_casa})")
+        st.info(f"👉 Turno de: **{st.session_state.turno}**")
 
-    if st.session_state.bj_estado == "jugando":
-        col_bj1, col_bj2 = st.sidebar.columns(2)
-        with col_bj1:
-            if st.button("🃏 Pedir", use_container_width=True, key="bj_pedir"):
-                st.session_state.bj_jugador.append(st.session_state.bj_baraja.pop())
-                if calcular_puntos(st.session_state.bj_jugador) > 21:
-                    st.session_state.bj_estado = "terminado"
-                    st.session_state.bj_msg = "❌ ¡Te pasaste de 21! Perdiste."
-                st.rerun()
-        with col_bj2:
-            if st.button("🛑 Plantarse", use_container_width=True, key="bj_plantar"):
-                st.session_state.bj_estado = "terminado"
-                while calcular_puntos(st.session_state.bj_casa) < 17:
-                    st.session_state.bj_casa.append(st.session_state.bj_baraja.pop())
-                
-                final_jugador = calcular_puntos(st.session_state.bj_jugador)
-                final_casa = calcular_puntos(st.session_state.bj_casa)
-                
-                if final_casa > 21:
-                    st.session_state.bj_saldo += st.session_state.bj_apuesta * 2
-                    st.session_state.bj_msg = f"🎉 ¡La casa se pasó! Ganaste ${st.session_state.bj_apuesta}."
-                elif final_jugador > final_casa:
-                    st.session_state.bj_saldo += st.session_state.bj_apuesta * 2
-                    st.session_state.bj_msg = f"🎉 ¡Ganaste por puntos! Recibes ${st.session_state.bj_apuesta}."
-                elif final_jugador < final_casa:
-                    st.session_state.bj_msg = "❌ Perdiste contra la casa."
+    cols_juego = st.columns(3)
+    for i in range(9):
+        with cols_juego[i % 3]:
+            contenido = st.session_state.tablero[i]
+            label_boton = contenido if contenido != "" else " "
+            desactivado = contenido != "" or st.session_state.ganador is not None
+            
+            if st.button(label_boton, key=f"btn_{i}", disabled=desactivado, use_container_width=True):
+                if st.session_state.turno == "Jugador 1 (X)":
+                    st.session_state.tablero[i] = "X"
+                    st.session_state.turno = "Jugador 2 (O)"
                 else:
-                    st.session_state.bj_saldo += st.session_state.bj_apuesta
-                    st.session_state.bj_msg = "🤝 Es un empate (Push)."
+                    st.session_state.tablero[i] = "O"
+                    st.session_state.turno = "Jugador 1 (X)"
+                st.session_state.ganador = verificar_ganador()
                 st.rerun()
-                
-    if st.session_state.bj_estado == "terminado":
-        if "🎉" in st.session_state.bj_msg or "Blackjack" in st.session_state.bj_msg:
-            st.sidebar.success(st.session_state.bj_msg)
-        elif "🤝" in st.session_state.bj_msg:
-            st.sidebar.warning(st.session_state.bj_msg)
-        else:
-            st.sidebar.error(st.session_state.bj_msg)
-            
-        if st.sidebar.button("🔄 Siguiente Mano", use_container_width=True, key="bj_reiniciar"):
-            st.session_state.bj_estado = "inicio"
-            st.rerun()
 
-
-# --- 🏇 JUEGO 3: CARRERA DE CABALLOS ---
-st.sidebar.markdown("---")
-st.sidebar.header("🏇 Hipódromo Virtual")
-
-caballos = {
-    "Rayo McQueen (x2.0)": 2.0,
-    "Usain Bolt (x3.5)": 3.5,
-    "Galopante (x5.0)": 5.0,
-    "Juan (x8.0)": 8.0
-}
-
-if "ch_apuesta" not in st.session_state:
-    st.session_state.ch_apuesta = 50
-
-if st.session_state.bj_saldo > 0:
-    caballo_elegido = st.sidebar.selectbox("Elegí tu caballo:", list(caballos.keys()))
-    st.session_state.ch_apuesta = st.sidebar.number_input(
-        "Monto a apostar (Carreras):", min_value=10, max_value=st.session_state.bj_saldo, value=min(50, st.session_state.bj_saldo), step=10, key="apuesta_ch_val"
-    )
-    
-    if st.sidebar.button("🏁 ¡Largar Carrera!", use_container_width=True):
-        st.session_state.bj_saldo -= st.session_state.ch_apuesta
-        
-        # Simulación animada de carrera
-        barra_progreso = st.sidebar.progress(0)
-        estado_carrera = st.sidebar.empty()
-        
-        for p in range(1, 101, 20):
-            estado_carrera.text(f"🏇 ¡Están corriendo! Distancia: {p}%...")
-            barra_progreso.progress(p)
-            time.sleep(0.3)
-            
-        barra_progreso.empty()
-        estado_carrera.empty()
-        
-        # Definir ganador aleatorio
-        ganador = random.choice(list(caballos.keys()))
-        
-        if ganador == caballo_elegido:
-            cuota = caballos[ganador]
-            premio = int(st.session_state.ch_apuesta * cuota)
-            st.session_state.bj_saldo += premio
-            st.sidebar.success(f"🏆 ¡Ganó {ganador}! ¡Acertaste y te llevas ${premio}! 🎉")
-        else:
-            st.sidebar.error(f"❌ Ganó {ganador}. Tu caballo llegó último. Perdiste ${st.session_state.ch_apuesta}.")
-        time.sleep(0.1)
-
-
-# --- 🎯 JUEGO 4: TIRO AL BLANCO ---
-st.sidebar.markdown("---")
-st.sidebar.header("🎯 Tiro al Blanco")
-
-if "tb_apuesta" not in st.session_state:
-    st.session_state.tb_apuesta = 50
-
-if st.session_state.bj_saldo > 0:
-    objetivo_usuario = st.sidebar.slider("Alineá tu mira (Posición 1 a 5):", 1, 5, 3)
-    st.session_state.tb_apuesta = st.sidebar.number_input(
-        "Monto a apostar (Tiro):", min_value=10, max_value=st.session_state.bj_saldo, value=min(50, st.session_state.bj_saldo), step=10, key="apuesta_tb_val"
-    )
-    
-    if st.sidebar.button("💥 ¡Fuego!", use_container_width=True):
-        st.session_state.bj_saldo -= st.session_state.tb_apuesta
-        
-        # Efecto de apuntado rápido
-        mira = st.sidebar.empty()
-        for i in range(3):
-            mira.text("🎯 Apuntando" + "." * (i + 1))
-            time.sleep(0.2)
-        mira.empty()
-        
-        # Posición real del blanco
-        blanco_real = random.randint(1, 5)
-        
-        if objetivo_usuario == blanco_real:
-            # Recompensa base por acertar en el blanco (Triple)
-            premio = st.session_state.tb_apuesta * 3
-            st.session_state.bj_saldo += premio
-            st.sidebar.success(f"🎯 ¡IMPACTO DIRECTO! El blanco estaba en la posición {blanco_real}. ¡Ganaste ${premio}!")
-        elif abs(objetivo_usuario - blanco_real) == 1:
-            # Rozó el blanco, devuelve la apuesta
-            st.session_state.bj_saldo += st.session_state.tb_apuesta
-            st.sidebar.warning(f"💥 ¡Casi! El blanco estaba en {blanco_real}. Le diste al borde y recuperás tu apuesta.")
-        else:
-            st.sidebar.error(f"💨 ¡Errado! El blanco apareció en la posición {blanco_real}. Perdiste ${st.session_state.tb_apuesta}.")
-
-
-# --- 🥤 JUEGO 5: TRES VASOS Y UNA BOLITA (TRILEROS) ---
-st.sidebar.markdown("---")
-st.sidebar.header("🥤 ¿Dónde está la bolita?")
-
-if "tl_apuesta" not in st.session_state:
-    st.session_state.tl_apuesta = 50
-
-if "tl_estado" not in st.session_state:
-    st.session_state.tl_estado = "inicio"  # inicio, mezclando, adivinar, resultado
-if "tl_bolita" not in st.session_state:
-    st.session_state.tl_bolita = 1
-if "tl_msg" not in st.session_state:
-    st.session_state.tl_msg = ""
-
-if st.session_state.bj_saldo > 0 or st.session_state.tl_estado != "inicio":
-    if st.session_state.tl_estado == "inicio":
-        st.session_state.tl_apuesta = st.sidebar.number_input(
-            "Monto a apostar (Vasos):", min_value=10, max_value=st.session_state.bj_saldo, value=min(50, st.session_state.bj_saldo), step=10, key="apuesta_tl_val"
-        )
-        if st.sidebar.button("🃏 Mostrar Bolita y Mezclar", use_container_width=True):
-            st.session_state.bj_saldo -= st.session_state.tl_apuesta
-            st.session_state.tl_estado = "mezclando"
-            st.rerun()
-
-    if st.session_state.tl_estado == "mezclando":
-        anim_vasos = st.sidebar.empty()
-        anim_vasos.markdown("### 🥤&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🥤&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🥤\n#### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🔴 (Acá está...)")
-        time.sleep(0.6)
-        for _ in range(3):
-            anim_vasos.markdown("### 🔄 ¡Mezclando vasos rápidamente! 🔄")
-            time.sleep(0.3)
-        anim_vasos.empty()
-        
-        st.session_state.tl_bolita = random.randint(0, 2)
-        st.session_state.tl_estado = "adivinar"
+    if st.button("🔄 Reiniciar Ta-Te-Ti", use_container_width=True):
+        st.session_state.tablero = [""] * 9
+        st.session_state.turno = "Jugador 1 (X)"
+        st.session_state.ganador = None
         st.rerun()
 
-    if st.session_state.tl_estado == "adivinar":
-        st.sidebar.write("🔒 *La bolita ya está oculta. Elegí un vaso:*")
-        cols_vasos = st.sidebar.columns(3)
-        for idx in range(3):
-            with cols_vasos[idx]:
-                if st.button(f"🥤 Vaso {idx+1}", key=f"btn_vaso_{idx}", use_container_width=True):
-                    if idx == st.session_state.tl_bolita:
-                        premio = st.session_state.tl_apuesta * 3
-                        st.session_state.bj_saldo += premio
-                        st.session_state.tl_msg = f"🎉 ¡EXCELENTE VISTA! La bolita estaba en el Vaso {idx+1}. Ganaste ${premio}."
-                    else:
-                        st.session_state.tl_msg = f"❌ ¡Le erraste! Estaba en el Vaso {st.session_state.tl_bolita+1}. Perdiste ${st.session_state.tl_apuesta}."
-                    st.session_state.tl_estado = "resultado"
-                    st.rerun()
+    st.markdown("---")
 
-    if st.session_state.tl_estado == "resultado":
-        vasos_dibujo = ["🥤", "🥤", "🥤"]
-        vasos_dibujo[st.session_state.tl_bolita] = "🥤🔴"
-        st.sidebar.markdown(f"### {vasos_dibujo[0]} &nbsp;&nbsp;&nbsp;&nbsp; {vasos_dibujo[1]} &nbsp;&nbsp;&nbsp;&nbsp; {vasos_dibujo[2]}")
+    # --- 🃏 JUEGO 2: BLACKJACK ---
+    st.subheader("🃏 Blackjack (21)")
+
+    def crear_baraja():
+        valores = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+        return valores * 4
+
+    def calcular_puntos(mano):
+        puntos = 0
+        ases = 0
+        for carta in mano:
+            if carta in ['J', 'Q', 'K']:
+                puntos += 10
+            elif carta == 'A':
+                ases += 1
+                puntos += 11
+            else:
+                puntos += int(carta)
+        while puntos > 21 and ases:
+            puntos -= 10
+            ases -= 1
+        return puntos
+
+    if "bj_apuesta" not in st.session_state:
+        st.session_state.bj_apuesta = 100
+
+    if "bj_baraja" not in st.session_state:
+        st.session_state.bj_baraja = crear_baraja()
+        st.session_state.bj_jugador = []
+        st.session_state.bj_casa = []
+        st.session_state.bj_estado = "inicio"
+        st.session_state.bj_msg = ""
+
+    def iniciar_blackjack():
+        st.session_state.bj_saldo -= st.session_state.bj_apuesta
+        st.session_state.bj_baraja = crear_baraja()
+        random.shuffle(st.session_state.bj_baraja)
+        st.session_state.bj_jugador = [st.session_state.bj_baraja.pop(), st.session_state.bj_baraja.pop()]
+        st.session_state.bj_casa = [st.session_state.bj_baraja.pop(), st.session_state.bj_baraja.pop()]
+        st.session_state.bj_estado = "jugando"
+        st.session_state.bj_msg = ""
         
-        if "🎉" in st.session_state.tl_msg:
-            st.sidebar.success(st.session_state.tl_msg)
+        if calcular_puntos(st.session_state.bj_jugador) == 21:
+            st.session_state.bj_estado = "terminado"
+            ganancia = int(st.session_state.bj_apuesta * 2.5)
+            st.session_state.bj_saldo += ganancia
+            st.session_state.bj_msg = f"¡Blackjack Natural! Ganaste ${ganancia}! 🎉"
+
+    if st.session_state.bj_estado == "inicio":
+        if st.session_state.bj_saldo > 0:
+            st.session_state.bj_apuesta = st.number_input(
+                "Apuesta Blackjack:", min_value=10, max_value=st.session_state.bj_saldo, value=min(100, st.session_state.bj_saldo), step=10, key="apuesta_bj_val"
+            )
+            if st.button("🃏 Repartir Cartas", use_container_width=True):
+                iniciar_blackjack()
+                st.rerun()
+    else:
+        pts_jugador = calcular_puntos(st.session_state.bj_jugador)
+        pts_casa = calcular_puntos(st.session_state.bj_casa)
+        
+        if st.session_state.bj_estado == "jugando":
+            st.write(f"**Tu Mano:** {', '.join(st.session_state.bj_jugador)} (Pts: {pts_jugador})")
+            st.write(f"**Casa:** {st.session_state.bj_casa[0]}, ❓")
         else:
-            st.sidebar.error(st.session_state.tl_msg)
+            st.write(f"**Tu Mano:** {', '.join(st.session_state.bj_jugador)} (Pts: {pts_jugador})")
+            st.write(f"**Casa:** {', '.join(st.session_state.bj_casa)} (Pts: {pts_casa})")
+
+        if st.session_state.bj_estado == "jugando":
+            col_bj1, col_bj2 = st.columns(2)
+            with col_bj1:
+                if st.button("🃏 Pedir", use_container_width=True, key="bj_pedir"):
+                    st.session_state.bj_jugador.append(st.session_state.bj_baraja.pop())
+                    if calcular_puntos(st.session_state.bj_jugador) > 21:
+                        st.session_state.bj_estado = "terminado"
+                        st.session_state.bj_msg = "❌ ¡Te pasaste de 21! Perdiste."
+                    st.rerun()
+            with col_bj2:
+                if st.button("🛑 Plantarse", use_container_width=True, key="bj_plantar"):
+                    st.session_state.bj_estado = "terminado"
+                    while calcular_puntos(st.session_state.bj_casa) < 17:
+                        st.session_state.bj_casa.append(st.session_state.bj_baraja.pop())
+                    
+                    final_jugador = calcular_puntos(st.session_state.bj_jugador)
+                    final_casa = calcular_puntos(st.session_state.bj_casa)
+                    
+                    if final_casa > 21:
+                        st.session_state.bj_saldo += st.session_state.bj_apuesta * 2
+                        st.session_state.bj_msg = f"🎉 ¡La casa se pasó! Ganaste ${st.session_state.bj_apuesta}."
+                    elif final_jugador > final_casa:
+                        st.session_state.bj_saldo += st.session_state.bj_apuesta * 2
+                        st.session_state.bj_msg = f"🎉 ¡Ganaste por puntos! Recibes ${st.session_state.bj_apuesta}."
+                    elif final_jugador < final_casa:
+                        st.session_state.bj_msg = "❌ Perdiste contra la casa."
+                    else:
+                        st.session_state.bj_saldo += st.session_state.bj_apuesta
+                        st.session_state.bj_msg = "🤝 Es un empate (Push)."
+                    st.rerun()
+                    
+        if st.session_state.bj_estado == "terminado":
+            if "🎉" in st.session_state.bj_msg or "Blackjack" in st.session_state.bj_msg:
+                st.success(st.session_state.bj_msg)
+            elif "🤝" in st.session_state.bj_msg:
+                st.warning(st.session_state.bj_msg)
+            else:
+                st.error(st.session_state.bj_msg)
+                
+            if st.button("🔄 Siguiente Mano", use_container_width=True, key="bj_reiniciar"):
+                st.session_state.bj_estado = "inicio"
+                st.rerun()
+
+    st.markdown("---")
+
+    # --- 🏇 JUEGO 3: CARRERA DE CABALLOS ---
+    st.subheader("🏇 Hipódromo Virtual")
+
+    caballos = {
+        "Rayo McQueen (x2.0)": 2.0,
+        "Usain Bolt (x3.5)": 3.5,
+        "Galopante (x5.0)": 5.0,
+        "Juan (x8.0)": 8.0
+    }
+
+    if "ch_apuesta" not in st.session_state:
+        st.session_state.ch_apuesta = 50
+
+    if st.session_state.bj_saldo > 0:
+        caballo_elegido = st.selectbox("Elegí tu caballo:", list(caballos.keys()))
+        st.session_state.ch_apuesta = st.number_input(
+            "Monto a apostar (Carreras):", min_value=10, max_value=st.session_state.bj_saldo, value=min(50, st.session_state.bj_saldo), step=10, key="apuesta_ch_val"
+        )
+        
+        if st.button("🏁 ¡Largar Carrera!", use_container_width=True):
+            st.session_state.bj_saldo -= st.session_state.ch_apuesta
             
-        if st.sidebar.button("🔄 Jugar otra vez", use_container_width=True, key="tl_reiniciar"):
-            st.session_state.tl_estado = "inicio"
+            barra_progreso = st.progress(0)
+            estado_carrera = st.empty()
+            
+            for p in range(1, 101, 20):
+                estado_carrera.text(f"🏇 ¡Están corriendo! Distancia: {p}%...")
+                barra_progreso.progress(p)
+                time.sleep(0.3)
+                
+            barra_progreso.empty()
+            estado_carrera.empty()
+            
+            ganador = random.choice(list(caballos.keys()))
+            
+            if ganador == caballo_elegido:
+                cuota = caballos[ganador]
+                premio = int(st.session_state.ch_apuesta * cuota)
+                st.session_state.bj_saldo += premio
+                st.success(f"🏆 ¡Ganó {ganador}! ¡Acertaste y te llevas ${premio}! 🎉")
+            else:
+                st.error(f"❌ Ganó {ganador}. Tu caballo llegó último. Perdiste ${st.session_state.ch_apuesta}.")
+            time.sleep(0.1)
+
+    st.markdown("---")
+
+    # --- 🎯 JUEGO 4: TIRO AL BLANCO ---
+    st.subheader("🎯 Tiro al Blanco")
+
+    if "tb_apuesta" not in st.session_state:
+        st.session_state.tb_apuesta = 50
+
+    if st.session_state.bj_saldo > 0:
+        objetivo_usuario = st.slider("Alineá tu mira (Posición 1 a 5):", 1, 5, 3)
+        st.session_state.tb_apuesta = st.number_input(
+            "Monto a apostar (Tiro):", min_value=10, max_value=st.session_state.bj_saldo, value=min(50, st.session_state.bj_saldo), step=10, key="apuesta_tb_val"
+        )
+        
+        if st.button("💥 ¡Fuego!", use_container_width=True):
+            st.session_state.bj_saldo -= st.session_state.tb_apuesta
+            
+            mira = st.empty()
+            for i in range(3):
+                mira.text("🎯 Apuntando" + "." * (i + 1))
+                time.sleep(0.2)
+            mira.empty()
+            
+            blanco_real = random.randint(1, 5)
+            
+            if objetivo_usuario == blanco_real:
+                premio = st.session_state.tb_apuesta * 3
+                st.session_state.bj_saldo += premio
+                st.success(f"🎯 ¡IMPACTO DIRECTO! El blanco estaba en la posición {blanco_real}. ¡Ganaste ${premio}!")
+            elif abs(objetivo_usuario - blanco_real) == 1:
+                st.session_state.bj_saldo += st.session_state.tb_apuesta
+                st.warning(f"💥 ¡Casi! El blanco estaba en {blanco_real}. Le diste al borde y recuperás tu apuesta.")
+            else:
+                st.error(f"💨 ¡Errado! El blanco apareció en la posición {blanco_real}. Perdiste ${st.session_state.tb_apuesta}.")
+
+    st.markdown("---")
+
+    # --- 🥤 JUEGO 5: TRES VASOS Y UNA BOLITA ---
+    st.subheader("🥤 ¿Dónde está la bolita?")
+
+    if "tl_apuesta" not in st.session_state:
+        st.session_state.tl_apuesta = 50
+
+    if "tl_estado" not in st.session_state:
+        st.session_state.tl_estado = "inicio"
+    if "tl_bolita" not in st.session_state:
+        st.session_state.tl_bolita = 1
+    if "tl_msg" not in st.session_state:
+        st.session_state.tl_msg = ""
+
+    if st.session_state.bj_saldo > 0 or st.session_state.tl_estado != "inicio":
+        if st.session_state.tl_estado == "inicio":
+            st.session_state.tl_apuesta = st.number_input(
+                "Monto a apostar (Vasos):", min_value=10, max_value=st.session_state.bj_saldo, value=min(50, st.session_state.bj_saldo), step=10, key="apuesta_tl_val"
+            )
+            if st.button("🃏 Mostrar Bolita y Mezclar", use_container_width=True):
+                st.session_state.bj_saldo -= st.session_state.tl_apuesta
+                st.session_state.tl_estado = "mezclando"
+                st.rerun()
+
+        if st.session_state.tl_estado == "mezclando":
+            anim_vasos = st.empty()
+            anim_vasos.markdown("### 🥤&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🥤&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🥤\n#### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🔴 (Acá está...)")
+            time.sleep(0.6)
+            for _ in range(3):
+                anim_vasos.markdown("### 🔄 ¡Mezclando vasos rápidamente! 🔄")
+                time.sleep(0.3)
+            anim_vasos.empty()
+            
+            st.session_state.tl_bolita = random.randint(0, 2)
+            st.session_state.tl_estado = "adivinar"
             st.rerun()
 
+        if st.session_state.tl_estado == "adivinar":
+            st.write("🔒 *La bolita ya está oculta. Elegí un vaso:*")
+            cols_vasos = st.columns(3)
+            for idx in range(3):
+                with cols_vasos[idx]:
+                    if st.button(f"🥤 Vaso {idx+1}", key=f"btn_vaso_{idx}", use_container_width=True):
+                        if idx == st.session_state.tl_bolita:
+                            premio = st.session_state.tl_apuesta * 3
+                            st.session_state.bj_saldo += premio
+                            st.session_state.tl_msg = f"🎉 ¡EXCELENTE VISTA! La bolita estaba en el Vaso {idx+1}. Ganaste ${premio}."
+                        else:
+                            st.session_state.tl_msg = f"❌ ¡Le erraste! Estaba en el Vaso {st.session_state.tl_bolita+1}. Perdiste ${st.session_state.tl_apuesta}."
+                        st.session_state.tl_estado = "resultado"
+                        st.rerun()
 
-# --- 🐦 JUEGO 6: FLAPPY BIRD EN HTML5 / JS ---
-st.sidebar.markdown("---")
-st.sidebar.header("🐦 Flappy Bird Arcadé")
-st.sidebar.write("Controles: **Espacio** o **Clic** para saltar.")
+        if st.session_state.tl_estado == "resultado":
+            vasos_dibujo = ["🥤", "🥤", "🥤"]
+            vasos_dibujo[st.session_state.tl_bolita] = "🥤🔴"
+            st.markdown(f"### {vasos_dibujo[0]} &nbsp;&nbsp;&nbsp;&nbsp; {vasos_dibujo[1]} &nbsp;&nbsp;&nbsp;&nbsp; {vasos_dibujo[2]}")
+            
+            if "🎉" in st.session_state.tl_msg:
+                st.success(st.session_state.tl_msg)
+            else:
+                st.error(st.session_state.tl_msg)
+                
+            if st.button("🔄 Jugar otra vez", use_container_width=True, key="tl_reiniciar"):
+                st.session_state.tl_estado = "inicio"
+                st.rerun()
 
-# Componente de juego interactivo incrustado en HTML5 Canvas
-flappy_bird_html = """
-<div style="text-align:center;">
-    <canvas id="fbCanvas" width="260" height="320" style="border:2px solid #333; background:#70c5ce; border-radius:10px; cursor:pointer;"></canvas>
-    <div style="font-family:sans-serif; font-size:14px; color:#555; margin-top:5px;">
-        Puntaje Actual: <span id="lblScore" style="font-weight:bold; color:#d9534f;">0</span>
+    st.markdown("---")
+
+    # --- 🐦 JUEGO 6: FLAPPY BIRD ---
+    st.subheader("🐦 Flappy Bird Arcade")
+    st.write("Controles: **Espacio** o **Clic** para saltar.")
+
+    flappy_bird_html = """
+    <div style="text-align:center;">
+        <canvas id="fbCanvas" width="240" height="300" style="border:2px solid #333; background:#70c5ce; border-radius:10px; cursor:pointer;"></canvas>
+        <div style="font-family:sans-serif; font-size:14px; color:#555; margin-top:5px;">
+            Puntaje: <span id="lblScore" style="font-weight:bold; color:#d9534f;">0</span>
+        </div>
     </div>
-</div>
-
-<script>
-    const canvas = document.getElementById("fbCanvas");
-    const ctx = canvas.getContext("2d");
-    const scoreLabel = document.getElementById("lblScore");
-
-    // Parámetros físicos del juego
-    let bird = { x: 40, y: 150, radius: 10, velocity: 0, gravity: 0.25, jump: -4.6 };
-    let pipes = [];
-    let frame = 0;
-    let score = 0;
-    let gameOver = false;
-    let gameStarted = false;
-
-    function resetGame() {
-        bird.y = 150; bird.velocity = 0;
-        pipes = []; score = 0; frame = 0;
-        gameOver = false; gameStarted = false;
-        scoreLabel.innerText = "0";
-    }
-
-    function spawnPipe() {
-        let gap = 90;
-        let minHeight = 40;
-        let maxHeight = canvas.height - gap - minHeight;
-        let height = Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
-        pipes.push({ x: canvas.width, top: height, bottom: canvas.height - height - gap, passed: false });
-    }
-
-    function loop() {
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-        // Fondo cielo simple
-        ctx.fillStyle = "#70c5ce";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-        // Lógica física del ave
-        if (gameStarted && !gameOver) {
-            bird.velocity += bird.gravity;
-            bird.y += bird.velocity;
-        }
-
-        // Límites de pantalla
-        if (bird.y + bird.radius >= canvas.height) { bird.y = canvas.height - bird.radius; gameOver = true; }
-        if (bird.y - bird.radius <= 0) { bird.y = bird.radius; bird.velocity = 0; }
-
-        // Dibujar Ave (Un círculo amarillo simpático)
-        ctx.fillStyle = "#f0ad4e";
-        ctx.beginPath(); ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2); ctx.fill();
-        // Ojito
-        ctx.fillStyle = "#000";
-        ctx.beginPath(); ctx.arc(bird.x + 4, bird.y - 3, 2, 0, Math.PI * 2); ctx.fill();
-        // Pico
-        ctx.fillStyle = "#d9534f";
-        ctx.beginPath(); ctx.moveTo(bird.x + 9, bird.y - 2); ctx.lineTo(bird.x + 15, bird.y); ctx.lineTo(bird.x + 9, bird.y + 4); ctx.fill();
-
-        // Generación y movimiento de cañerías
-        if (gameStarted && !gameOver) {
-            if (frame % 100 === 0) spawnPipe();
-            frame++;
-        }
-
-        for (let i = pipes.length - 1; i >= 0; i--) {
-            if (gameStarted && !gameOver) pipes[i].x -= 1.8;
-
-            // Dibujar caño superior
-            ctx.fillStyle = "#5cb85c";
-            ctx.fillRect(pipes[i].x, 0, 40, pipes[i].top);
-            ctx.lineWidth = 2; ctx.strokeStyle = "#3e8f3e";
-            ctx.strokeRect(pipes[i].x, 0, 40, pipes[i].top);
-
-            // Dibujar caño inferior
-            ctx.fillRect(pipes[i].x, canvas.height - pipes[i].bottom, 40, pipes[i].bottom);
-            ctx.strokeRect(pipes[i].x, canvas.height - pipes[i].bottom, 40, pipes[i].bottom);
-
-            // Verificar colisiones
-            if (bird.x + bird.radius > pipes[i].x && bird.x - bird.radius < pipes[i].x + 40) {
-                if (bird.y - bird.radius < pipes[i].top || bird.y + bird.radius > canvas.height - pipes[i].bottom) {
-                    gameOver = true;
+    <script>
+        const canvas = document.getElementById("fbCanvas"); const ctx = canvas.getContext("2d"); const scoreLabel = document.getElementById("lblScore");
+        let bird = { x: 40, y: 140, radius: 10, velocity: 0, gravity: 0.25, jump: -4.5 };
+        let pipes = []; let frame = 0; let score = 0; let gameOver = false; let gameStarted = false;
+        function resetGame() { bird.y = 140; bird.velocity = 0; pipes = []; score = 0; frame = 0; gameOver = false; gameStarted = false; scoreLabel.innerText = "0"; }
+        function spawnPipe() { let gap = 85; let minH = 30; let maxH = canvas.height - gap - minH; let h = Math.floor(Math.random()*(maxH-minH+1))+minH; pipes.push({ x: canvas.width, top: h, bottom: canvas.height-h-gap, passed: false }); }
+        function loop() {
+            ctx.fillStyle = "#70c5ce"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            if(gameStarted && !gameOver){ bird.velocity += bird.gravity; bird.y += bird.velocity; }
+            if(bird.y+bird.radius >= canvas.height){ gameOver = true; }
+            ctx.fillStyle = "#f0ad4e"; ctx.beginPath(); ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI*2); ctx.fill();
+            if(gameStarted && !gameOver){ if(frame%90===0) spawnPipe(); frame++; }
+            for(let i=pipes.length-1; i>=0; i--){
+                if(gameStarted && !gameOver) pipes[i].x -= 2;
+                ctx.fillStyle = "#5cb85c"; ctx.fillRect(pipes[i].x, 0, 35, pipes[i].top); ctx.fillRect(pipes[i].x, canvas.height-pipes[i].bottom, 35, pipes[i].bottom);
+                if(bird.x+bird.radius > pipes[i].x && bird.x-bird.radius < pipes[i].x+35){
+                    if(bird.y-bird.radius < pipes[i].top || bird.y+bird.radius > canvas.height-pipes[i].bottom) gameOver = true;
                 }
+                if(!pipes[i].passed && pipes[i].x+35 < bird.x){ pipes[i].passed = true; score++; scoreLabel.innerText = score; }
+                if(pipes[i].x + 35 < 0) pipes.splice(i,1);
             }
+            if(!gameStarted){ ctx.fillStyle="rgba(0,0,0,0.3)"; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.fillStyle="#fff"; ctx.font="14px sans-serif"; ctx.textAlign="center"; ctx.fillText("Clic para Volar", canvas.width/2, canvas.height/2); }
+            else if(gameOver){ ctx.fillStyle="rgba(0,0,0,0.5)"; ctx.fillRect(0,0,canvas.width,canvas.height); ctx.fillStyle="#fff"; ctx.font="16px sans-serif"; ctx.textAlign="center"; ctx.fillText("GAME OVER", canvas.width/2, canvas.height/2); }
+            requestAnimationFrame(loop);
+        }
+        function act(e){ if(e.type==='keydown' && e.code!=='Space')return; if(!gameStarted){gameStarted=true; bird.velocity=bird.jump;} else if(gameOver){resetGame();} else {bird.velocity=bird.jump;} }
+        window.addEventListener("keydown", act); canvas.addEventListener("click", act);
+        resetGame(); loop();
+    </script>
+    """
+    components.html(flappy_bird_html, height=335)
 
-            // Sumar puntos al pasar el obstáculo
-            if (!pipes[i].passed && pipes[i].x + 40 < bird.x) {
-                pipes[i].passed = true;
-                score++;
-                scoreLabel.innerText = score;
-                // Enviamos de vuelta el puntaje a Streamlit en tiempo real
-                window.parent.postMessage({type: 'score_update', value: score}, '*');
-            }
+    # --- 🐷 JUEGO 7: ANGRY BIRDS CLONE (NUEVO) ---
+    st.markdown("---")
+    st.subheader("🐷 Angry Birds Arcade")
+    st.write("Arrastrá y soltá el pájaro rojo para derribar al chancho.")
 
-            if (pipes[i].x + 40 < 0) pipes.splice(i, 1);
+    angry_birds_html = """
+    <div style="text-align:center;">
+        <canvas id="abCanvas" width="240" height="240" style="border:2px solid #333; background:#a2d2ff; border-radius:10px;"></canvas>
+        <div style="font-family:sans-serif; font-size:14px; color:#555; margin-top:5px;">
+            Derribos: <span id="lblAbScore" style="font-weight:bold; color:#5cb85c;">0</span>
+        </div>
+    </div>
+    <script>
+        const canvas = document.getElementById("abCanvas"); const ctx = canvas.getContext("2d"); const abScoreLabel = document.getElementById("lblAbScore");
+        let sling = { x: 50, y: 160 };
+        let bird = { x: 50, y: 160, vx: 0, vy: 0, radius: 10, isFlying: false, isDragging: false };
+        let pig = { x: 190, y: 170, radius: 12, isHit: false };
+        let abScore = 0;
+
+        function resetRound() {
+            bird.x = sling.x; bird.y = sling.y; bird.vx = 0; bird.vy = 0; bird.isFlying = false; bird.isDragging = false;
+            pig.x = 150 + Math.random() * 60; pig.y = 170; pig.isHit = false;
         }
 
-        // Pantallas informativas superpuestas
-        if (!gameStarted) {
-            ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.fillRect(0,0,canvas.width,canvas.height);
-            ctx.fillStyle = "#fff"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
-            ctx.fillText("Hacé Clic o Espacio", canvas.width/2, canvas.height/2 - 10);
-            ctx.fillText("¡Para Volar!", canvas.width/2, canvas.height/2 + 15);
-        } else if (gameOver) {
-            ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0,0,canvas.width,canvas.height);
-            ctx.fillStyle = "#fff"; ctx.font = "bold 20px sans-serif"; ctx.textAlign = "center";
-            ctx.fillText("GAME OVER 💥", canvas.width/2, canvas.height/2 - 15);
-            ctx.font = "14px sans-serif";
-            ctx.fillText("Clic para reiniciar", canvas.width/2, canvas.height/2 + 15);
+        canvas.addEventListener("mousedown", (e) => {
+            if (bird.isFlying) return;
+            const rect = canvas.getBoundingClientRect(); const mx = e.clientX - rect.left; const my = e.clientY - rect.top;
+            if (Math.hypot(mx - bird.x, my - bird.y) < 20) { bird.isDragging = true; }
+        });
+
+        canvas.addEventListener("mousemove", (e) => {
+            if (!bird.isDragging) return;
+            const rect = canvas.getBoundingClientRect(); const mx = e.clientX - rect.left; const my = e.clientY - rect.top;
+            let dist = Math.min(Math.hypot(mx - sling.x, my - sling.y), 40);
+            let angle = Math.atan2(my - sling.y, mx - sling.x);
+            bird.x = sling.x + dist * Math.cos(angle); bird.y = sling.y + dist * Math.sin(angle);
+        });
+
+        canvas.addEventListener("mouseup", (e) => {
+            if (!bird.isDragging) return;
+            bird.isDragging = false; bird.isFlying = true;
+            bird.vx = (sling.x - bird.x) * 0.15; bird.vy = (sling.y - bird.y) * 0.15;
+        });
+
+        function abLoop() {
+            ctx.fillStyle = "#a2d2ff"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = "#875a36"; ctx.fillRect(0, 180, canvas.width, 60); // Piso
+            ctx.strokeStyle = "#53351d"; ctx.lineWidth = 4; ctx.beginPath(); ctx.moveTo(sling.x, sling.y); ctx.lineTo(sling.x, 180); ctx.stroke(); // Resortera
+            
+            if (bird.isFlying) {
+                bird.vy += 0.15; bird.x += bird.vx; bird.y += bird.vy;
+                if (bird.y > 170 || bird.x > canvas.width || bird.x < 0) { setTimeout(resetRound, 1000); bird.isFlying = false; }
+            }
+            
+            // Colisión con Chancho
+            if (!pig.isHit && Math.hypot(bird.x - pig.x, bird.y - pig.y) < (bird.radius + pig.radius)) {
+                pig.isHit = true; abScore++; abScoreLabel.innerText = abScore;
+            }
+
+            // Dibujar Pájaro (Rojo)
+            ctx.fillStyle = "#d9534f"; ctx.beginPath(); ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI*2); ctx.fill();
+            // Dibujar Chancho (Verde)
+            if (!pig.isHit) { ctx.fillStyle = "#5cb85c"; ctx.beginPath(); ctx.arc(pig.x, pig.y, pig.radius, 0, Math.PI*2); ctx.fill(); }
+
+            requestAnimationFrame(abLoop);
         }
+        resetRound(); abLoop();
+    </script>
+    """
+    components.html(angry_birds_html, height=275)
 
-        requestAnimationFrame(loop);
-    }
+    # --- SISTEMA DE CANJE UNIFICADO ---
+    st.markdown("---")
+    if "fb_record_actual" not in st.session_state:
+        st.session_state.fb_record_actual = 0
 
-    // Manejadores de eventos de acción (Salto)
-    function handleAction(e) {
-        if (e.type === 'keydown' && e.code !== 'Space') return;
-        if(e.type === 'keydown') e.preventDefault(); // Evitar scroll con espacio
-        
-        if (!gameStarted) { gameStarted = true; bird.velocity = bird.jump; }
-        else if (gameOver) { resetGame(); }
-        else { bird.velocity = bird.jump; }
-    }
-
-    window.addEventListener("keydown", handleAction);
-    canvas.addEventListener("click", handleAction);
-
-    resetGame();
-    loop();
-</script>
-"""
-
-# Inicializamos estados para transferir puntos del Canvas a Streamlit
-if "fb_record_actual" not in st.session_state:
-    st.session_state.fb_record_actual = 0
-
-# Renderizamos el Widget del juego
-components.html(flappy_bird_html, height=365)
-
-# Input oculto/simulado que puede usarse para reclamar recompensas de fichas basados en tu habilidad
-st.sidebar.write(f"🏆 *Tu mejor puntaje en esta sesión:* **{st.session_state.fb_record_actual} puntos**")
-
-col_fb1, col_fb2 = st.sidebar.columns(2)
-with col_fb1:
-    puntos_a_reclamar = st.number_input("Puntaje a canjear:", min_value=0, value=0, step=1, key="fb_canje")
-with col_fb2:
-    st.write("##")
-    if st.button("💰 Cobrar Fichas", use_container_width=True):
+    puntos_a_reclamar = st.number_input("Puntos de Arcade a canjear:", min_value=0, value=0, step=1, key="arcade_canje")
+    if st.button("💰 Cobrar Fichas de Arcade", use_container_width=True):
         if puntos_a_reclamar > 0:
-            # Recompensa: $50 por cada caño superado
             ganancia_fb = puntos_a_reclamar * 50
             st.session_state.bj_saldo += ganancia_fb
             if puntos_a_reclamar > st.session_state.fb_record_actual:
                 st.session_state.fb_record_actual = puntos_a_reclamar
-            st.sidebar.success(f"¡Reclamaste ${ganancia_fb} fichas!")
+            st.success(f"¡Reclamaste ${ganancia_fb} fichas!")
             st.rerun()
 
 
@@ -603,7 +564,7 @@ res = milp(
     integrality=[0] * 7
 )
 
-# --- MOSTRAR RESULTADOS ---
+# --- MOSTRAR RESULTADOS PRINCIPALES ---
 col1, col2 = st.columns(2)
 
 with col1:
