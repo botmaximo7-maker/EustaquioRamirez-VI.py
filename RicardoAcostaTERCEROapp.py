@@ -1,5 +1,6 @@
 import streamlit as st
 import numpy as np
+import random
 from scipy.optimize import milp, LinearConstraint, Bounds
 
 # Configuración de la página web
@@ -38,6 +39,7 @@ with st.expander("🚨 Caso 2: ¡Se mudó la suegra con la familia extendida!", 
 st.write("---")
 st.write("💡 *Modifica los parámetros en la barra lateral para ajustar el sistema al nuevo escenario familiar.*")
 
+
 # --- BARRA LATERAL: ENTRADA DE DATOS ---
 st.sidebar.header("📊 Restricciones Globales")
 limite_presupuesto = st.sidebar.number_input("Presupuesto Máximo ($)", value=15000, step=500)
@@ -69,11 +71,10 @@ for ap in aparatos:
         datos_usuario[ap] = {"prio": prio, "costo": costo, "watts": watts, "min_h": min_h}
 
 
-# --- 🕹️ JUEGO: TRES EN RAYA (AL FINAL DE LA BARRA LATERAL) ---
+# --- 🕹️ JUEGO 1: TRES EN RAYA ---
 st.sidebar.markdown("---")
-st.sidebar.header("🎮 Tres en Raya (Para pasar el rato)")
+st.sidebar.header("🎮 Tres en Raya")
 
-# Inicializar variables del juego en el estado de la sesión
 if "tablero" not in st.session_state:
     st.session_state.tablero = [""] * 9
 if "turno" not in st.session_state:
@@ -84,9 +85,9 @@ if "ganador" not in st.session_state:
 def verificar_ganador():
     t = st.session_state.tablero
     combinaciones = [
-        [0, 1, 2], [3, 4, 5], [6, 7, 8], # Horizontales
-        [0, 3, 6], [1, 4, 7], [2, 5, 8], # Verticales
-        [0, 4, 8], [2, 4, 6]             # Diagonales
+        [0, 1, 2], [3, 4, 5], [6, 7, 8],
+        [0, 3, 6], [1, 4, 7], [2, 5, 8],
+        [0, 4, 8], [2, 4, 6]
     ]
     for combo in combinaciones:
         if t[combo[0]] == t[combo[1]] == t[combo[2]] != "":
@@ -95,7 +96,6 @@ def verificar_ganador():
         return "Empate"
     return None
 
-# Mostrar el turno actual o el resultado
 if st.session_state.ganador:
     if st.session_state.ganador == "Empate":
         st.sidebar.warning("¡Es un Empate! 🤝")
@@ -104,14 +104,11 @@ if st.session_state.ganador:
 else:
     st.sidebar.info(f"👉 Turno de: **{st.session_state.turno}**")
 
-# Dibujar la cuadrícula del tablero utilizando columnas de Streamlit
 cols_juego = st.sidebar.columns(3)
 for i in range(9):
     with cols_juego[i % 3]:
         contenido = st.session_state.tablero[i]
         label_boton = contenido if contenido != "" else " "
-        
-        # Desactivar botón si ya se jugó o si hay un ganador
         desactivado = contenido != "" or st.session_state.ganador is not None
         
         if st.button(label_boton, key=f"btn_{i}", disabled=desactivado, use_container_width=True):
@@ -121,16 +118,120 @@ for i in range(9):
             else:
                 st.session_state.tablero[i] = "O"
                 st.session_state.turno = "Jugador 1 (X)"
-            
             st.session_state.ganador = verificar_ganador()
             st.rerun()
 
-# Botón para reiniciar el juego
-if st.sidebar.button("🔄 Reiniciar Partida", use_container_width=True):
+if st.sidebar.button("🔄 Reiniciar Ta-Te-Ti", use_container_width=True):
     st.session_state.tablero = [""] * 9
     st.session_state.turno = "Jugador 1 (X)"
     st.session_state.ganador = None
     st.rerun()
+
+
+# --- 🃏 JUEGO 2: BLACKJACK (AL FINAL DE LA BARRA LATERAL) ---
+st.sidebar.markdown("---")
+st.sidebar.header("🃏 Blackjack (21)")
+
+# Funciones auxiliares para las cartas
+def crear_baraja():
+    valores = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
+    return valores * 4
+
+def calcular_puntos(mano):
+    puntos = 0
+    ases = 0
+    for carta in mano:
+        if carta in ['J', 'Q', 'K']:
+            puntos += 10
+        elif carta == 'A':
+            ases += 1
+            puntos += 11
+        else:
+            puntos += int(carta)
+    while puntos > 21 and ases:
+        puntos -= 10
+        ases -= 1
+    return puntos
+
+# Inicializar estados de Blackjack
+if "bj_baraja" not in st.session_state:
+    st.session_state.bj_baraja = crear_baraja()
+    st.session_state.bj_jugador = []
+    st.session_state.bj_casa = []
+    st.session_state.bj_estado = "inicio"  # inicio, jugando, terminado
+    st.session_state.bj_msg = ""
+
+def iniciar_blackjack():
+    st.session_state.bj_baraja = crear_baraja()
+    random.shuffle(st.session_state.bj_baraja)
+    st.session_state.bj_jugador = [st.session_state.bj_baraja.pop(), st.session_state.bj_baraja.pop()]
+    st.session_state.bj_casa = [st.session_state.bj_baraja.pop(), st.session_state.bj_baraja.pop()]
+    st.session_state.bj_estado = "jugando"
+    st.session_state.bj_msg = ""
+    
+    # Comprobar Blackjack natural inmediato
+    if calcular_puntos(st.session_state.bj_jugador) == 21:
+        st.session_state.bj_estado = "terminado"
+        st.session_state.bj_msg = "¡Blackjack Natural! ¡Ganaste! 🎉"
+
+# Interfaz de Blackjack
+if st.session_state.bj_estado == "inicio":
+    if st.sidebar.button("🃏 Repartir Cartas", use_container_width=True):
+        iniciar_blackjack()
+        st.rerun()
+else:
+    pts_jugador = calcular_puntos(st.session_state.bj_jugador)
+    pts_casa = calcular_puntos(st.session_state.bj_casa)
+    
+    # Mostrar cartas
+    if st.session_state.bj_estado == "jugando":
+        st.sidebar.write(f"**Tu Mano:** {', '.join(st.session_state.bj_jugador)} (Pts: {pts_jugador})")
+        st.sidebar.write(f"**Casa:** {st.session_state.bj_casa[0]}, ❓")
+    else:
+        st.sidebar.write(f"**Tu Mano:** {', '.join(st.session_state.bj_jugador)} (Pts: {pts_jugador})")
+        st.sidebar.write(f"**Casa:** {', '.join(st.session_state.bj_casa)} (Pts: {pts_casa})")
+
+    # Botones de juego
+    if st.session_state.bj_estado == "jugando":
+        col_bj1, col_bj2 = st.sidebar.columns(2)
+        with col_bj1:
+            if st.button("🃏 Pedir", use_container_width=True, key="bj_pedir"):
+                st.session_state.bj_jugador.append(st.session_state.bj_baraja.pop())
+                if calcular_puntos(st.session_state.bj_jugador) > 21:
+                    st.session_state.bj_estado = "terminado"
+                    st.session_state.bj_msg = "❌ ¡Te pasaste de 21! Perdiste."
+                st.rerun()
+        with col_bj2:
+            if st.button("🛑 Plantarse", use_container_width=True, key="bj_plantar"):
+                st.session_state.bj_estado = "terminado"
+                # Turno de la casa de forma automática
+                while calcular_puntos(st.session_state.bj_casa) < 17:
+                    st.session_state.bj_casa.append(st.session_state.bj_baraja.pop())
+                
+                final_jugador = calcular_puntos(st.session_state.bj_jugador)
+                final_casa = calcular_puntos(st.session_state.bj_casa)
+                
+                if final_casa > 21:
+                    st.session_state.bj_msg = "🎉 ¡La casa se pasó! ¡Ganaste!"
+                elif final_jugador > final_casa:
+                    st.session_state.bj_msg = "🎉 ¡Ganaste por puntos!"
+                elif final_jugador < final_casa:
+                    st.session_state.bj_msg = "❌ Perdiste contra la casa."
+                else:
+                    st.session_state.bj_msg = "🤝 Es un empate (Push)."
+                st.rerun()
+                
+    if st.session_state.bj_estado == "terminado":
+        if "¡Ganaste!" in st.session_state.bj_msg or "Blackjack" in st.session_state.bj_msg:
+            st.sidebar.success(st.session_state.bj_msg)
+        elif "empate" in st.session_state.bj_msg:
+            st.sidebar.warning(st.session_state.bj_msg)
+        else:
+            st.sidebar.error(st.session_state.bj_msg)
+            
+        if st.sidebar.button("🔄 Jugar de Nuevo", use_container_width=True, key="bj_reiniciar"):
+            iniciar_blackjack()
+            st.rerun()
 
 
 # --- PROCESAMIENTO DE LOS DATOS DE OPTIMIZACIÓN ---
@@ -185,4 +286,3 @@ with col2:
         st.metric(label="Total Aparatos Conectados (Mínimo: " + str(min_aparatos) + ")", value=f"{tot_aparatos:.2f}")
         st.metric(label="Gasto Mensual Total (Máximo: $" + str(limite_presupuesto) + ")", value=f"${tot_dinero:.2f}")
         st.metric(label="Consumo de Potencia Total (Máximo: " + str(limite_watts) + " W)", value=f"{tot_watts:.2f} Watts")
-       
