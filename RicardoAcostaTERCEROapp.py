@@ -2,6 +2,7 @@
 import streamlit as st
 import numpy as np
 import random
+import time
 from scipy.optimize import milp, LinearConstraint, Bounds
 
 # Configuración de la página web
@@ -72,8 +73,21 @@ for ap in aparatos:
         datos_usuario[ap] = {"prio": prio, "costo": costo, "watts": watts, "min_h": min_h}
 
 
-# --- 🕹️ JUEGO 1: TRES EN RAYA ---
+# --- 💰 ESTADO COMPARTIDO DE FICHAS ---
+if "bj_saldo" not in st.session_state:
+    st.session_state.bj_saldo = 1000
+
 st.sidebar.markdown("---")
+st.sidebar.markdown(f"### 🏦 Billetera del Casino: **${st.session_state.bj_saldo}**")
+
+if st.session_state.bj_saldo <= 0:
+    st.sidebar.error("😢 Te quedaste sin fondos en el casino.")
+    if st.sidebar.button("💸 Pedir un Plan de Pago (+$500)", use_container_width=True):
+        st.session_state.bj_saldo = 500
+        st.rerun()
+
+
+# --- 🕹️ JUEGO 1: TRES EN RAYA ---
 st.sidebar.header("🎮 Tres en Raya")
 
 if "tablero" not in st.session_state:
@@ -129,11 +143,10 @@ if st.sidebar.button("🔄 Reiniciar Ta-Te-Ti", use_container_width=True):
     st.rerun()
 
 
-# --- 🃏 JUEGO 2: BLACKJACK CON SALDO FALSO ---
+# --- 🃏 JUEGO 2: BLACKJACK ---
 st.sidebar.markdown("---")
 st.sidebar.header("🃏 Blackjack (21)")
 
-# Funciones auxiliares para las cartas
 def crear_baraja():
     valores = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A']
     return valores * 4
@@ -154,9 +167,6 @@ def calcular_puntos(mano):
         ases -= 1
     return puntos
 
-# Inicializar estados de Blackjack y Saldo Falso
-if "bj_saldo" not in st.session_state:
-    st.session_state.bj_saldo = 1000
 if "bj_apuesta" not in st.session_state:
     st.session_state.bj_apuesta = 100
 
@@ -164,16 +174,11 @@ if "bj_baraja" not in st.session_state:
     st.session_state.bj_baraja = crear_baraja()
     st.session_state.bj_jugador = []
     st.session_state.bj_casa = []
-    st.session_state.bj_estado = "inicio"  # inicio, jugando, terminado
+    st.session_state.bj_estado = "inicio"
     st.session_state.bj_msg = ""
 
-# Mostrar el saldo actual destacado
-st.sidebar.metric(label="💰 Tu Saldo de Fichas", value=f"${st.session_state.bj_saldo}")
-
 def iniciar_blackjack():
-    # Descontar la apuesta al iniciar la mano
     st.session_state.bj_saldo -= st.session_state.bj_apuesta
-    
     st.session_state.bj_baraja = crear_baraja()
     random.shuffle(st.session_state.bj_baraja)
     st.session_state.bj_jugador = [st.session_state.bj_baraja.pop(), st.session_state.bj_baraja.pop()]
@@ -181,27 +186,17 @@ def iniciar_blackjack():
     st.session_state.bj_estado = "jugando"
     st.session_state.bj_msg = ""
     
-    # Comprobar Blackjack natural inmediato
     if calcular_puntos(st.session_state.bj_jugador) == 21:
         st.session_state.bj_estado = "terminado"
-        # Paga 3 a 2 por Blackjack Natural
         ganancia = int(st.session_state.bj_apuesta * 2.5)
         st.session_state.bj_saldo += ganancia
         st.session_state.bj_msg = f"¡Blackjack Natural! Ganaste ${ganancia}! 🎉"
 
-# Interfaz de Blackjack
 if st.session_state.bj_estado == "inicio":
-    # Selección de apuesta si no se está jugando
-    st.session_state.bj_apuesta = st.sidebar.number_input(
-        "Monto a apostar:", min_value=10, max_value=st.session_state.bj_saldo, value=min(100, st.session_state.bj_saldo), step=10, key="apuesta_val"
-    )
-    
-    if st.session_state.bj_saldo <= 0:
-        st.sidebar.error("😢 ¡Te quedaste sin fichas!")
-        if st.sidebar.button("💸 Solicitar préstamo (+$500)", use_container_width=True):
-            st.session_state.bj_saldo = 500
-            st.rerun()
-    else:
+    if st.session_state.bj_saldo > 0:
+        st.session_state.bj_apuesta = st.sidebar.number_input(
+            "Apuesta Blackjack:", min_value=10, max_value=st.session_state.bj_saldo, value=min(100, st.session_state.bj_saldo), step=10, key="apuesta_bj_val"
+        )
         if st.sidebar.button("🃏 Repartir Cartas", use_container_width=True):
             iniciar_blackjack()
             st.rerun()
@@ -209,7 +204,6 @@ else:
     pts_jugador = calcular_puntos(st.session_state.bj_jugador)
     pts_casa = calcular_puntos(st.session_state.bj_casa)
     
-    # Mostrar cartas
     if st.session_state.bj_estado == "jugando":
         st.sidebar.write(f"**Tu Mano:** {', '.join(st.session_state.bj_jugador)} (Pts: {pts_jugador})")
         st.sidebar.write(f"**Casa:** {st.session_state.bj_casa[0]}, ❓")
@@ -217,7 +211,6 @@ else:
         st.sidebar.write(f"**Tu Mano:** {', '.join(st.session_state.bj_jugador)} (Pts: {pts_jugador})")
         st.sidebar.write(f"**Casa:** {', '.join(st.session_state.bj_casa)} (Pts: {pts_casa})")
 
-    # Botones de juego activo
     if st.session_state.bj_estado == "jugando":
         col_bj1, col_bj2 = st.sidebar.columns(2)
         with col_bj1:
@@ -225,13 +218,11 @@ else:
                 st.session_state.bj_jugador.append(st.session_state.bj_baraja.pop())
                 if calcular_puntos(st.session_state.bj_jugador) > 21:
                     st.session_state.bj_estado = "terminado"
-                    st.session_state.bj_msg = "❌ ¡Te pasaste de 21! Perdiste tu apuesta."
+                    st.session_state.bj_msg = "❌ ¡Te pasaste de 21! Perdiste."
                 st.rerun()
         with col_bj2:
             if st.button("🛑 Plantarse", use_container_width=True, key="bj_plantar"):
                 st.session_state.bj_estado = "terminado"
-                
-                # Turno automático del crupier
                 while calcular_puntos(st.session_state.bj_casa) < 17:
                     st.session_state.bj_casa.append(st.session_state.bj_baraja.pop())
                 
@@ -248,7 +239,7 @@ else:
                     st.session_state.bj_msg = "❌ Perdiste contra la casa."
                 else:
                     st.session_state.bj_saldo += st.session_state.bj_apuesta
-                    st.session_state.bj_msg = "🤝 Es un empate (Push). Recuperas tu apuesta."
+                    st.session_state.bj_msg = "🤝 Es un empate (Push)."
                 st.rerun()
                 
     if st.session_state.bj_estado == "terminado":
@@ -262,6 +253,54 @@ else:
         if st.sidebar.button("🔄 Siguiente Mano", use_container_width=True, key="bj_reiniciar"):
             st.session_state.bj_estado = "inicio"
             st.rerun()
+
+
+# --- 🏇 JUEGO 3: CARRERA DE CABALLOS ---
+st.sidebar.markdown("---")
+st.sidebar.header("🏇 Hípódromo Virtual")
+
+caballos = {
+    "Rayo Eléctrico (x2.0)": 2.0,
+    "Cortocircuito (x3.5)": 3.5,
+    "La Suega Veloz (x5.0)": 5.0,
+    "Lavarropas Turbo (x8.0)": 8.0
+}
+
+if "ch_apuesta" not in st.session_state:
+    st.session_state.ch_apuesta = 50
+
+if st.session_state.bj_saldo > 0:
+    caballo_elegido = st.sidebar.selectbox("Elegí tu caballo:", list(caballos.keys()))
+    st.session_state.ch_apuesta = st.sidebar.number_input(
+        "Monto a apostar (Carreras):", min_value=10, max_value=st.session_state.bj_saldo, value=min(50, st.session_state.bj_saldo), step=10, key="apuesta_ch_val"
+    )
+    
+    if st.sidebar.button("🏁 ¡Largar Carrera!", use_container_width=True):
+        st.session_state.bj_saldo -= st.session_state.ch_apuesta
+        
+        # Simulación animada de carrera
+        barra_progreso = st.sidebar.progress(0)
+        estado_carrera = st.sidebar.empty()
+        
+        for p in range(1, 101, 20):
+            estado_carrera.text(f"🏇 ¡Están corriendo! Distancia: {p}%...")
+            barra_progreso.progress(p)
+            time.sleep(0.3)
+            
+        barra_progreso.empty()
+        estado_carrera.empty()
+        
+        # Definir ganador aleatorio
+        ganador = random.choice(list(caballos.keys()))
+        
+        if ganador == caballo_elegido:
+            cuota = caballos[ganador]
+            premio = int(st.session_state.ch_apuesta * cuota)
+            st.session_state.bj_saldo += premio
+            st.sidebar.success(f"🏆 ¡Ganó {ganador}! ¡Acertaste y te llevas ${premio}! 🎉")
+        else:
+            st.sidebar.error(f"❌ Ganó {ganador}. Tu caballo llegó último. Perdiste ${st.session_state.ch_apuesta}.")
+        time.sleep(0.1)
 
 
 # --- PROCESAMIENTO DE LOS DATOS DE OPTIMIZACIÓN ---
@@ -316,5 +355,7 @@ with col2:
         st.metric(label="Total Aparatos Conectados (Mínimo: " + str(min_aparatos) + ")", value=f"{tot_aparatos:.2f}")
         st.metric(label="Gasto Mensual Total (Máximo: $" + str(limite_presupuesto) + ")", value=f"${tot_dinero:.2f}")
         st.metric(label="Consumo de Potencia Total (Máximo: " + str(limite_watts) + " W)", value=f"{tot_watts:.2f} Watts")
+
+
 
 
