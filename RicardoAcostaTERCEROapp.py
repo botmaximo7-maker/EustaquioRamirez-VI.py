@@ -25,7 +25,7 @@ with st.expander("📖 Caso 1: El Desafío Base (Maximizar el Bienestar)", expan
 with st.expander("🚨 Caso 2: ¡Se mudó la suegra con la familia extendida!", expanded=True):
     st.warning(
         "### 📈 Crisis de Demanda Eléctrica y Financiera\n"
-        "**El nuevo escenario:** La suegra, sus dos hijas y los hijos de sus hijas se han mudado a la casa de forma permanente. "
+        "**El nuevo escenario:** La suegra,y sus dos hijas y los hijos de sus hijas se han mudado a la casa de forma permanente. "
         "Al multiplicarse los habitantes (¡y debido a que no tienen cultura de ahorro!), el uso real "
         "de los electrodomésticos se ha disparado por completo.\n\n"
         "**Consecuencias en el sistema:**\n"
