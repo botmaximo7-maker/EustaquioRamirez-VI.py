@@ -1,10 +1,4 @@
-¡Dale, sumemos acción a la barra lateral! Convertir esta app en una sala de juegos completa ya es un viaje de ida.
 
-Agregué el minijuego **"🎯 Tiro al Blanco"** justo abajo de las carreras de caballos. Funciona de manera súper interactiva: el blanco se mueve de posición (aleatoria del 1 al 5) y vos tenés que elegir a qué posición disparar. Además, si acertás en el centro exacto, te duplica la recompensa por multiplicador crítico.
-
-Aquí tenés el bloque completo listo para correr:
-
-```python
 import streamlit as st
 import numpy as np
 import random
@@ -401,7 +395,7 @@ with col2:
         st.metric(label="Gasto Mensual Total (Máximo: $" + str(limite_presupuesto) + ")", value=f"${tot_dinero:.2f}")
         st.metric(label="Consumo de Potencia Total (Máximo: " + str(limite_watts) + " W)", value=f"{tot_watts:.2f} W")
 
-```
+
 
 
 
