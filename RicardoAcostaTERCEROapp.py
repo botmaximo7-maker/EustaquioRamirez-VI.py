@@ -5,8 +5,24 @@ from scipy.optimize import milp, LinearConstraint, Bounds
 # Configuración de la página web
 st.set_page_config(page_title="Optimización del Hogar", layout="wide")
 
-st.title("⚡ Optimidad Eléctrica y Calidad de Vida")
-st.write("Modifica los parámetros en la barra lateral para recalcular las horas óptimas de uso al mes.")
+# --- CONTEXTO DEL PROBLEMA EN LA PARTE SUPERIOR ---
+st.title("⚡ Optimización Eléctrica y de Calidad de Vida")
+
+with st.expander("📖 Ver descripción del problema a resolver", expanded=True):
+    st.info(
+        "### 🎯 El Desafío: Maximizar el Bienestar en el Hogar\n"
+        "Este sistema resuelve un problema de **Programación Lineal** para balancear el confort diario "
+        "y el uso de electrodomésticos bajo restricciones económicas y energéticas estrictas.\n\n"
+        "**¿Qué intenta resolver la aplicación?**\n"
+        "1. **Objetivo Principal:** Encontrar cuántas horas al mes usar cada aparato para obtener la **máxima calidad de vida** "
+        "posible (basada en la importancia/prioridad asignada a cada uno).\n"
+        "2. **Restricción de Presupuesto:** El costo total acumulado por el uso por hora de los aparatos no debe superar el dinero mensual disponible.\n"
+        "3. **Restricción Energética:** El consumo eléctrico total no puede exceder el límite de Watts contratados o asignados para evitar sobrecargas.\n"
+        "4. **Restricción de Confort:** Asegurar que cada aparato se use al menos un tiempo mínimo mensual preestablecido, garantizando un piso de comodidad."
+    )
+
+st.write("---")
+st.write("💡 *Modifica los parámetros en la barra lateral para recalcular las horas óptimas de uso al mes automáticamente.*")
 
 # --- BARRA LATERAL: ENTRADA DE DATOS ---
 st.sidebar.header("📊 Restricciones Globales")
