@@ -1,10 +1,4 @@
-¡Totalmente! Vamos a darle un toque de casino real agregando un monedero con "fichas de la casa" falsas.
 
-Para lograrlo de forma correcta, inicializaremos un saldo de **$1,000** en el `st.session_state` si el usuario no ha jugado antes. El juego cobrará una apuesta fija (o puedes dejar que se configure automáticamente) y sumará o restará fondos según ganes, pierdas o empates (¡e incluso si sacas un Blackjack natural, paga 3 a 2!).
-
-Aquí tienes el código completo con el sistema de apuestas integrado:
-
-```python
 import streamlit as st
 import numpy as np
 import random
