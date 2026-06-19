@@ -1,4 +1,5 @@
 import streamlit as st
+import streamlit.components.v1 as components
 import numpy as np
 import random
 import time
@@ -366,7 +367,6 @@ if st.session_state.bj_saldo > 0 or st.session_state.tl_estado != "inicio":
             st.rerun()
 
     if st.session_state.tl_estado == "mezclando":
-        # Simulación visual del truco de manos
         anim_vasos = st.sidebar.empty()
         anim_vasos.markdown("### 🥤&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🥤&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🥤\n#### &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;🔴 (Acá está...)")
         time.sleep(0.6)
@@ -375,7 +375,6 @@ if st.session_state.bj_saldo > 0 or st.session_state.tl_estado != "inicio":
             time.sleep(0.3)
         anim_vasos.empty()
         
-        # Asignar posición final secreta (0, 1 o 2)
         st.session_state.tl_bolita = random.randint(0, 2)
         st.session_state.tl_estado = "adivinar"
         st.rerun()
@@ -396,7 +395,6 @@ if st.session_state.bj_saldo > 0 or st.session_state.tl_estado != "inicio":
                     st.rerun()
 
     if st.session_state.tl_estado == "resultado":
-        # Dibujar gráficamente dónde estaba
         vasos_dibujo = ["🥤", "🥤", "🥤"]
         vasos_dibujo[st.session_state.tl_bolita] = "🥤🔴"
         st.sidebar.markdown(f"### {vasos_dibujo[0]} &nbsp;&nbsp;&nbsp;&nbsp; {vasos_dibujo[1]} &nbsp;&nbsp;&nbsp;&nbsp; {vasos_dibujo[2]}")
@@ -406,8 +404,176 @@ if st.session_state.bj_saldo > 0 or st.session_state.tl_estado != "inicio":
         else:
             st.sidebar.error(st.session_state.tl_msg)
             
-        if st.sidebar.button("🔄 Jugar otra vez", use_container_width=True):
+        if st.sidebar.button("🔄 Jugar otra vez", use_container_width=True, key="tl_reiniciar"):
             st.session_state.tl_estado = "inicio"
+            st.rerun()
+
+
+# --- 🐦 JUEGO 6: FLAPPY BIRD EN HTML5 / JS ---
+st.sidebar.markdown("---")
+st.sidebar.header("🐦 Flappy Bird Arcadé")
+st.sidebar.write("Controles: **Espacio** o **Clic** para saltar.")
+
+# Componente de juego interactivo incrustado en HTML5 Canvas
+flappy_bird_html = """
+<div style="text-align:center;">
+    <canvas id="fbCanvas" width="260" height="320" style="border:2px solid #333; background:#70c5ce; border-radius:10px; cursor:pointer;"></canvas>
+    <div style="font-family:sans-serif; font-size:14px; color:#555; margin-top:5px;">
+        Puntaje Actual: <span id="lblScore" style="font-weight:bold; color:#d9534f;">0</span>
+    </div>
+</div>
+
+<script>
+    const canvas = document.getElementById("fbCanvas");
+    const ctx = canvas.getContext("2d");
+    const scoreLabel = document.getElementById("lblScore");
+
+    // Parámetros físicos del juego
+    let bird = { x: 40, y: 150, radius: 10, velocity: 0, gravity: 0.25, jump: -4.6 };
+    let pipes = [];
+    let frame = 0;
+    let score = 0;
+    let gameOver = false;
+    let gameStarted = false;
+
+    function resetGame() {
+        bird.y = 150; bird.velocity = 0;
+        pipes = []; score = 0; frame = 0;
+        gameOver = false; gameStarted = false;
+        scoreLabel.innerText = "0";
+    }
+
+    function spawnPipe() {
+        let gap = 90;
+        let minHeight = 40;
+        let maxHeight = canvas.height - gap - minHeight;
+        let height = Math.floor(Math.random() * (maxHeight - minHeight + 1)) + minHeight;
+        pipes.push({ x: canvas.width, top: height, bottom: canvas.height - height - gap, passed: false });
+    }
+
+    function loop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        // Fondo cielo simple
+        ctx.fillStyle = "#70c5ce";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Lógica física del ave
+        if (gameStarted && !gameOver) {
+            bird.velocity += bird.gravity;
+            bird.y += bird.velocity;
+        }
+
+        // Límites de pantalla
+        if (bird.y + bird.radius >= canvas.height) { bird.y = canvas.height - bird.radius; gameOver = true; }
+        if (bird.y - bird.radius <= 0) { bird.y = bird.radius; bird.velocity = 0; }
+
+        // Dibujar Ave (Un círculo amarillo simpático)
+        ctx.fillStyle = "#f0ad4e";
+        ctx.beginPath(); ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2); ctx.fill();
+        // Ojito
+        ctx.fillStyle = "#000";
+        ctx.beginPath(); ctx.arc(bird.x + 4, bird.y - 3, 2, 0, Math.PI * 2); ctx.fill();
+        // Pico
+        ctx.fillStyle = "#d9534f";
+        ctx.beginPath(); ctx.moveTo(bird.x + 9, bird.y - 2); ctx.lineTo(bird.x + 15, bird.y); ctx.lineTo(bird.x + 9, bird.y + 4); ctx.fill();
+
+        // Generación y movimiento de cañerías
+        if (gameStarted && !gameOver) {
+            if (frame % 100 === 0) spawnPipe();
+            frame++;
+        }
+
+        for (let i = pipes.length - 1; i >= 0; i--) {
+            if (gameStarted && !gameOver) pipes[i].x -= 1.8;
+
+            // Dibujar caño superior
+            ctx.fillStyle = "#5cb85c";
+            ctx.fillRect(pipes[i].x, 0, 40, pipes[i].top);
+            ctx.lineWidth = 2; ctx.strokeStyle = "#3e8f3e";
+            ctx.strokeRect(pipes[i].x, 0, 40, pipes[i].top);
+
+            // Dibujar caño inferior
+            ctx.fillRect(pipes[i].x, canvas.height - pipes[i].bottom, 40, pipes[i].bottom);
+            ctx.strokeRect(pipes[i].x, canvas.height - pipes[i].bottom, 40, pipes[i].bottom);
+
+            // Verificar colisiones
+            if (bird.x + bird.radius > pipes[i].x && bird.x - bird.radius < pipes[i].x + 40) {
+                if (bird.y - bird.radius < pipes[i].top || bird.y + bird.radius > canvas.height - pipes[i].bottom) {
+                    gameOver = true;
+                }
+            }
+
+            // Sumar puntos al pasar el obstáculo
+            if (!pipes[i].passed && pipes[i].x + 40 < bird.x) {
+                pipes[i].passed = true;
+                score++;
+                scoreLabel.innerText = score;
+                // Enviamos de vuelta el puntaje a Streamlit en tiempo real
+                window.parent.postMessage({type: 'score_update', value: score}, '*');
+            }
+
+            if (pipes[i].x + 40 < 0) pipes.splice(i, 1);
+        }
+
+        // Pantallas informativas superpuestas
+        if (!gameStarted) {
+            ctx.fillStyle = "rgba(0,0,0,0.4)"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = "#fff"; ctx.font = "bold 16px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("Hacé Clic o Espacio", canvas.width/2, canvas.height/2 - 10);
+            ctx.fillText("¡Para Volar!", canvas.width/2, canvas.height/2 + 15);
+        } else if (gameOver) {
+            ctx.fillStyle = "rgba(0,0,0,0.6)"; ctx.fillRect(0,0,canvas.width,canvas.height);
+            ctx.fillStyle = "#fff"; ctx.font = "bold 20px sans-serif"; ctx.textAlign = "center";
+            ctx.fillText("GAME OVER 💥", canvas.width/2, canvas.height/2 - 15);
+            ctx.font = "14px sans-serif";
+            ctx.fillText("Clic para reiniciar", canvas.width/2, canvas.height/2 + 15);
+        }
+
+        requestAnimationFrame(loop);
+    }
+
+    // Manejadores de eventos de acción (Salto)
+    function handleAction(e) {
+        if (e.type === 'keydown' && e.code !== 'Space') return;
+        if(e.type === 'keydown') e.preventDefault(); // Evitar scroll con espacio
+        
+        if (!gameStarted) { gameStarted = true; bird.velocity = bird.jump; }
+        else if (gameOver) { resetGame(); }
+        else { bird.velocity = bird.jump; }
+    }
+
+    window.addEventListener("keydown", handleAction);
+    canvas.addEventListener("click", handleAction);
+
+    resetGame();
+    loop();
+</script>
+"""
+
+# Inicializamos estados para transferir puntos del Canvas a Streamlit
+if "fb_record_actual" not in st.session_state:
+    st.session_state.fb_record_actual = 0
+
+# Renderizamos el Widget del juego
+components.html(flappy_bird_html, height=365)
+
+# Input oculto/simulado que puede usarse para reclamar recompensas de fichas basados en tu habilidad
+st.sidebar.write(f"🏆 *Tu mejor puntaje en esta sesión:* **{st.session_state.fb_record_actual} puntos**")
+
+col_fb1, col_fb2 = st.sidebar.columns(2)
+with col_fb1:
+    puntos_a_reclamar = st.number_input("Puntaje a canjear:", min_value=0, value=0, step=1, key="fb_canje")
+with col_fb2:
+    st.write("##")
+    if st.button("💰 Cobrar Fichas", use_container_width=True):
+        if puntos_a_reclamar > 0:
+            # Recompensa: $50 por cada caño superado
+            ganancia_fb = puntos_a_reclamar * 50
+            st.session_state.bj_saldo += ganancia_fb
+            if puntos_a_reclamar > st.session_state.fb_record_actual:
+                st.session_state.fb_record_actual = puntos_a_reclamar
+            st.sidebar.success(f"¡Reclamaste ${ganancia_fb} fichas!")
             st.rerun()
 
 
@@ -463,10 +629,5 @@ with col2:
         st.metric(label="Total Aparatos Conectados (Mínimo: " + str(min_aparatos) + ")", value=f"{tot_aparatos:.2f}")
         st.metric(label="Gasto Mensual Total (Máximo: $" + str(limite_presupuesto) + ")", value=f"${tot_dinero:.2f}")
         st.metric(label="Consumo de Potencia Total (Máximo: " + str(limite_watts) + " W)", value=f"{tot_watts:.2f} W")
-
-
-
-
-
 
 
